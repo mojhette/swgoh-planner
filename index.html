@@ -111,7 +111,38 @@ textarea{resize:vertical;margin-bottom:10px}
 .pct-range input[type=range]{flex:1;background:transparent;border:none;padding:0;cursor:pointer}
 .pct-lbl{min-width:36px;font-size:12px;color:var(--text);text-align:right}
 
-/* DB MANAGER */
+/* SCOUT */
+.scout-input-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:12px}
+.scout-input-row label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+.scout-round-tabs{display:flex;gap:3px;margin-bottom:14px;flex-wrap:wrap}
+.scout-round-btn{padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;transition:.15s}
+.scout-round-btn.active{background:var(--s2);color:var(--text);border-color:var(--b2)}
+.scout-round-btn:hover:not(.active){color:var(--text)}
+.scout-zone-block{background:var(--surface);border-radius:var(--rl);padding:12px 14px;margin-bottom:10px}
+.scout-zone-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--border)}
+.scout-zone-north .scout-zone-title{color:var(--north-c)}
+.scout-zone-south .scout-zone-title{color:var(--south-c)}
+.scout-zone-back  .scout-zone-title{color:var(--back-c)}
+.scout-zone-ship  .scout-zone-title{color:var(--ship-c)}
+.scout-def-row{display:grid;grid-template-columns:160px 1fr auto;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.scout-def-row:last-child{border-bottom:none}
+.scout-def-name{font-weight:500;color:var(--text)}
+.scout-counters{display:flex;flex-wrap:wrap;gap:4px}
+.scout-ctr-pill{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--s2);border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:.1s}
+.scout-ctr-pill:hover{border-color:var(--accent);color:var(--accent)}
+.scout-ctr-pill.seen-hi{border-color:rgba(34,197,94,.4);color:var(--green)}
+.scout-ctr-pill.seen-med{border-color:rgba(234,179,8,.3);color:var(--yellow)}
+.scout-attempts{font-size:10px;color:var(--muted);white-space:nowrap;text-align:right}
+.scout-attempts.many{color:var(--red)}
+.scout-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.scout-summary .stat{background:var(--surface);border-radius:var(--r);padding:10px 12px}
+.scout-loading{color:var(--muted);font-size:13px;padding:20px 0;text-align:center}
+.scout-error{color:var(--red);font-size:12px;padding:10px 0}
+.scout-freq-badge{font-size:10px;background:rgba(79,127,255,.15);color:var(--accent);border:1px solid rgba(79,127,255,.3);border-radius:3px;padding:1px 5px;margin-left:4px}
+.planner-import-btn{font-size:11px;padding:2px 8px;border-radius:4px;background:rgba(79,127,255,.12);border:1px solid rgba(79,127,255,.3);color:var(--accent);cursor:pointer;font-family:inherit;transition:.1s;white-space:nowrap}
+.planner-import-btn:hover{background:rgba(79,127,255,.25)}
+
+
 .db-section{background:var(--surface);border-radius:var(--rl);padding:14px;margin-bottom:12px}
 .db-section-title{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 .db-table{width:100%;border-collapse:collapse;font-size:12px}
@@ -138,13 +169,14 @@ textarea{resize:vertical;margin-bottom:10px}
     <h1>⚔ SWGOH GAC Planner</h1>
     <div class="subtitle" id="dbMeta"></div>
   </div>
-  <button class="btn sm" onclick="showTab('dbmanager',document.querySelectorAll('.tab-btn')[3])">⚙ DB Manager</button>
+  <button class="btn sm" onclick="showTab('dbmanager',document.querySelectorAll('.tab-btn')[4])">⚙ DB Manager</button>
 </div>
 
 <div class="tabs">
   <button class="tab-btn active" onclick="showTab('planner',this)">Planner</button>
   <button class="tab-btn" onclick="showTab('roster',this)">Roster</button>
   <button class="tab-btn" onclick="showTab('lookup',this)">Lookup</button>
+  <button class="tab-btn" onclick="showTab('scout',this)">🔍 Scout</button>
   <button class="tab-btn" onclick="showTab('dbmanager',this)">DB Manager</button>
 </div>
 
@@ -311,6 +343,51 @@ textarea{resize:vertical;margin-bottom:10px}
       <button class="btn sm primary" onclick="dbSaveToFile()">⬇ Export DB as .js file</button>
     </div>
   </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCOUT
+══════════════════════════════════════════ -->
+<div id="panel-scout" class="panel">
+  <div class="infobox">
+    Scouting uses the same browser-console approach as the DB Manager — no CORS issues.
+    <strong>Workflow:</strong> Enter the opponent's ally code + event ID → Copy script → Paste into swgoh.gg console → Import the downloaded JSON here.
+  </div>
+
+  <div class="scout-input-row">
+    <div>
+      <label>Opponent Ally Code</label>
+      <input type="text" id="scoutAllyCode" placeholder="e.g. 537154498" maxlength="12" oninput="ls.set('gac_scout_state',JSON.stringify({allyCode:this.value.replace(/\D/g,''),eventId:document.getElementById('scoutEventId').value}))">
+    </div>
+    <div>
+      <label>Season Event ID (from URL)</label>
+      <input type="text" id="scoutEventId" placeholder="e.g. O1779829200000" oninput="ls.set('gac_scout_state',JSON.stringify({allyCode:document.getElementById('scoutAllyCode').value.replace(/\D/g,''),eventId:this.value}))">
+    </div>
+    <button class="btn primary" onclick="scoutGenerateScript()">📋 Copy script</button>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:14px">
+    Find the event ID in any GAC history URL: swgoh.gg/p/<strong>ALLYCODE</strong>/gac-history/<strong>O1779829200000</strong>/1/
+  </div>
+
+  <div class="db-section" style="margin-bottom:12px">
+    <div class="db-section-title">How to use</div>
+    <ol style="font-size:12px;color:var(--muted);line-height:2;padding-left:18px">
+      <li>Enter ally code + event ID above, click <strong>Copy script</strong></li>
+      <li>Open <strong>swgoh.gg</strong> in your browser (any page, must be logged in)</li>
+      <li>Open DevTools console (F12 → Console) and paste the script</li>
+      <li>A JSON file downloads automatically — come back here and import it</li>
+      <li>Click <strong>→ Load into Planner</strong> to fill your Planner slots</li>
+    </ol>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn sm primary" onclick="scoutGenerateScript()">📋 Copy scout script</button>
+      <button class="btn sm" onclick="document.getElementById('scoutImportInput').click()">⬆ Import scout JSON</button>
+      <input type="file" id="scoutImportInput" accept=".json" style="display:none" onchange="scoutHandleImport(event)">
+    </div>
+  </div>
+
+  <div id="scoutRoundTabs" class="scout-round-tabs" style="display:none"></div>
+  <div id="scoutSummary" class="scout-summary" style="display:none"></div>
+  <div id="scoutResults"></div>
 </div>
 
 </div><!-- .app -->
@@ -535,18 +612,14 @@ function loadAll(){
   const cd=ls.get("gac_custom"); if(cd)customDB=JSON.parse(cd);
   ["3v3","5v5"].forEach(m=>{const sv=ls.get("gac_slots_"+m);if(sv)slots[m]=JSON.parse(sv);});
   const pp=ls.get("gac_pins"); if(pp) pins=JSON.parse(pp);
-  // Restore imported counters — overwrite hardcoded DB entries with saved ones
+  // Restore imported counters — merges saved data on top of hardcoded DB
   ["3v3","5v5","ships"].forEach(mode=>{
     const saved=ls.get("gac_db_"+mode);
-    if(saved){
-      const parsed=JSON.parse(saved);
-      Object.assign(DB[mode], parsed);
-    }
+    if(saved){ try{ Object.assign(DB[mode],JSON.parse(saved)); }catch(e){} }
   });
 }
 
 function saveDB(mode){
-  // Save only entries that have data (don't bloat storage with empty arrays)
   const toSave={};
   Object.entries(DB[mode]).forEach(([k,v])=>{ if(v&&v.length>0) toSave[k]=v; });
   ls.set("gac_db_"+mode, JSON.stringify(toSave));
@@ -574,6 +647,7 @@ function showTab(name, btn){
   btn.classList.add("active");
   if(name==="lookup") renderTags();
   if(name==="dbmanager"){ dbLoadSeasons(); dbRenderTable("3v3"); dbRenderTable("5v5"); dbRenderTable("ships"); }
+  if(name==="scout"){ scoutRestoreState(); }
 }
 
 // ══════════════════════════════════════════
@@ -1333,7 +1407,6 @@ function dbHandleImport(event){
     }
 
     ls.set('gac_db_live', JSON.stringify({time:Date.now()}));
-    // Persist imported counters so they survive page refresh
     ["3v3","5v5","ships"].forEach(m=>saveDB(m));
     dbRenderTable('3v3');
     dbRenderTable('5v5');
@@ -1436,10 +1509,508 @@ function dbSaveToFile(){
 }
 
 
+// ══════════════════════════════════════════
+// SCOUT TAB
+// ══════════════════════════════════════════
+// SCOUT — zone detection via SVG path index
+// SVG gac-zone-layout paths (confirmed by DOM inspection):
+//   path[0] = North   path[1] = South   path[2] = Ships   path[3] = Back
+// The active zone has class "gac-zone-layout--is-active" on its path element.
+// ══════════════════════════════════════════
+
+const SCOUT_ZONE_MAP = ["north", "south", "ship", "back"];
+
+// Persisted scout state
+let scoutData = {}; // { allyCode, eventId, rounds: { "1": [...battles], "2": [...], "3": [...] } }
+let scoutActiveRound = "all";
+
+// Reverse-lookup: swgoh.gg character code → display name
+function scoutCodeToName(code) {
+  const extra = {
+    "CAPITALMONCALAMARICRUISER":"Home One","CAPITALSTARDESTROYER":"Executrix",
+    "CAPITALRADDUS":"Raddus","GLAHSOKATANO":"Ahsoka Tano","GREATMOTHERS":"Great Mothers",
+    "GENERALSYNDULLA":"General Syndulla","GRANDINQUISITOR":"Grand Inquisitor",
+    "CAPTAINSILVO":"Captain Silvo","DASHRENDAR":"Dash Rendar",
+    "CASSIANUNDERCOVER":"Cassian Andor (Undercover)","MONMOTHMA":"Mon Mothma",
+    "MAJORPARTAGAZ":"Major Partagaz","TRENCH":"Admiral Trench",
+  };
+  const allCodes = Object.assign({}, DB_CODES_3V3, DB_CODES_SHIPS, extra);
+  for (const [name, c] of Object.entries(allCodes)) { if (c === code) return name; }
+  return code;
+}
+
+// Parse the OPPONENT'S defense section from a GAC history page
+// Returns array of { defCode, attackerCode, zone, isShip, banners, outcome, attempts }
+function scoutParseDefenses(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const battles = [];
+
+  // The page has exactly two sections separated by an h2-style header text:
+  // Section A: "[Player]'s attacks / [Opp]'s defenses"  → opponent defends
+  // Section B: "[Opp]'s attacks / [Player]'s defenses"  → PLAYER defends (what we want)
+  //
+  // We identify section B by finding all battle containers and picking those
+  // that come AFTER the midpoint separator. Each battle container holds:
+  //   - One SVG with gac-zone-layout (zone indicator)
+  //   - One Insight link with a_lead= (attacker)
+  //   - One Counters/Insight link with d_lead= (defender, only in section B)
+  //   - Banners / Outcome / Attempt text
+
+  // Find all battle wrapper elements — they contain both an SVG zone map and battle info
+  // The SVG class is "gac-zone-layout__svg"
+  const zoneSVGs = doc.querySelectorAll("svg.gac-zone-layout__svg");
+
+  zoneSVGs.forEach(svg => {
+    // Determine zone from active path
+    const paths = svg.querySelectorAll("path");
+    let zone = "unknown";
+    paths.forEach((path, idx) => {
+      if (path.classList.contains("gac-zone-layout--is-active")) {
+        zone = SCOUT_ZONE_MAP[idx] || "unknown";
+      }
+    });
+    const isShip = (zone === "ship");
+
+    // Walk up to the battle container
+    let container = svg.parentElement;
+    for (let i = 0; i < 6 && container; i++) container = container.parentElement;
+    if (!container) return;
+
+    // Get defender code (d_lead= link — only present for the defense side)
+    const defLinks = container.querySelectorAll('a[href*="d_lead="]');
+    if (!defLinks.length) return; // attacker side only has a_lead, skip
+    const defMatch = defLinks[0].getAttribute("href").match(/d_lead=([A-Z0-9_]+)/);
+    if (!defMatch) return;
+    const defCode = defMatch[1];
+
+    // Get attacker code (a_lead= link)
+    const atkLinks = container.querySelectorAll('a[href*="a_lead="]');
+    let attackerCode = null;
+    if (atkLinks.length) {
+      const m = atkLinks[0].getAttribute("href").match(/a_lead=([A-Z0-9_]+)/);
+      if (m) attackerCode = m[1];
+    }
+
+    // Get banners, outcome, attempts from text content
+    const txt = container.innerText || "";
+    const bm = txt.match(/Banners\s*(\d+)/);
+    const om = txt.match(/Outcome\s*(Win|Loss|Draw|Retreat)/);
+    const am = txt.match(/Attempt\s*(\d+)/);
+
+    battles.push({
+      defCode,
+      attackerCode,
+      zone,
+      isShip,
+      banners:  bm ? parseInt(bm[1]) : 0,
+      outcome:  om ? om[1] : "?",
+      attempts: am ? parseInt(am[1]) : 1,
+    });
+  });
+
+  // The page has two sections: we only want section B (opponent attacks player's defense)
+  // Section B starts after the midpoint. Since both sections have the same number of battles,
+  // we split at the halfway point.
+  const half = Math.floor(battles.length / 2);
+  return battles.slice(half);
+}
+
+function scoutGenerateScript() {
+  const code = document.getElementById("scoutAllyCode").value.trim().replace(/\D/g,"");
+  const evId = document.getElementById("scoutEventId").value.trim();
+  if (!code) { toast("Enter an ally code first"); return; }
+  if (!evId)  { toast("Enter a season event ID first"); return; }
+
+  const script = `(function(){
+  const allyCode = '${code}';
+  const eventId  = '${evId}';
+  const rounds   = ['1','2','3'];
+  const ZONE_MAP = ['north','south','ship','back'];
+
+  function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  function getZoneFromSVG(svg) {
+    const paths = svg.querySelectorAll('path');
+    for(let i=0;i<paths.length;i++){
+      const cls = paths[i].getAttribute('class')||'';
+      if(cls.includes('is-active')) return ZONE_MAP[i]||'unknown';
+    }
+    return 'unknown';
+  }
+
+  function parseDefenses(doc) {
+    // Each battle block contains: SVG zone map + attacker squad (a_lead) + defender squad (d_lead)
+    // The defender squad has a "Counters" link with d_lead= — attacker side only has a_lead.
+    // Strategy: find all Counters links (d_lead only), then for each one walk UP to find
+    // the enclosing battle block, then find its SVG and attacker link.
+    //
+    // The page has TWO sections (SinTez attacks / Opp attacks).
+    // We want section 2: opponent attacks SinTez defenses = SinTez's defense squads.
+    // Section 2 starts after the midpoint of all d_lead links on the page.
+
+    const allDefLinks = Array.from(doc.querySelectorAll('a[href*="d_lead="]'));
+    const half = Math.floor(allDefLinks.length / 2);
+    const defSection = allDefLinks.slice(half); // section 2 = SinTez defends
+
+    const battles = [];
+
+    defSection.forEach(defLink => {
+      const defMatch = defLink.href.match(/d_lead=([A-Z0-9_]+)/);
+      if(!defMatch) return;
+      const defCode = defMatch[1];
+      const isShip = defLink.href.includes('combat_type=2') ||
+                     defLink.href.includes('ship-counters');
+
+      // Find the SVG zone map: walk UP from defLink to find a parent that contains an SVG
+      let el = defLink;
+      let svg = null;
+      let attackerCode = null;
+      let banners = 0, outcome = '?', attempts = 1;
+
+      // Walk up max 15 levels looking for a container with both SVG and a_lead
+      for(let i=0;i<15;i++){
+        el = el.parentElement;
+        if(!el) break;
+        if(!svg) {
+          const s = el.querySelector('svg.gac-zone-layout__svg');
+          if(s) svg = s;
+        }
+        if(!attackerCode) {
+          const aLink = el.querySelector('a[href*="a_lead="]');
+          if(aLink){
+            const m = aLink.href.match(/a_lead=([A-Z0-9_]+)/);
+            if(m) attackerCode = m[1];
+          }
+        }
+        // Once we have both, grab stats and stop
+        if(svg && attackerCode) {
+          const txt = el.innerText||'';
+          const bm = txt.match(/Banners\\s*(\\d+)/);
+          const om = txt.match(/Outcome\\s*(Win|Loss|Draw|Retreat)/);
+          const am = txt.match(/Attempt\\s*(\\d+)/);
+          if(bm) banners = parseInt(bm[1]);
+          if(om) outcome = om[1];
+          if(am) attempts = parseInt(am[1]);
+          break;
+        }
+      }
+
+      const zone = svg ? getZoneFromSVG(svg) : 'unknown';
+
+      battles.push({ defCode, attackerCode, zone, isShip: zone==='ship',
+        banners, outcome, attempts });
+    });
+
+    return battles;
+  }
+
+  async function run(){
+    console.log('Starting scout for '+allyCode+'...');
+    const results = {};
+    for(let i=0;i<rounds.length;i++){
+      const r = rounds[i];
+      console.log('Fetching round '+r+'...');
+      try{
+        const url = 'https://swgoh.gg/p/'+allyCode+'/gac-history/'+eventId+'/'+r+'/';
+        const resp = await fetch(url,{credentials:'include'});
+        const html = await resp.text();
+        const doc  = new DOMParser().parseFromString(html,'text/html');
+        results[r] = parseDefenses(doc);
+        console.log('Round '+r+': '+results[r].length+' defense battles. Defenders: '+[...new Set(results[r].map(b=>b.defCode))].join(', '));
+      } catch(e){
+        console.warn('Round '+r+' failed:',e.message);
+        results[r] = [];
+      }
+      if(i < rounds.length-1) await delay(700);
+    }
+    const out = JSON.stringify({ allyCode, eventId, rounds: results }, null, 2);
+    const blob = new Blob([out],{type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'scout_'+allyCode+'_'+eventId+'.json';
+    a.click();
+    console.log('Done! Import the downloaded JSON into the GAC Planner Scout tab.');
+  }
+  run();
+})();`;
+
+  navigator.clipboard.writeText(script).then(() => {
+    toast("Script copied — paste into swgoh.gg console");
+  }).catch(() => {
+    const ta = document.createElement("textarea");
+    ta.value = script;
+    ta.style.cssText = "width:100%;height:160px;font-size:11px;font-family:monospace;background:var(--s2);color:var(--muted);border:1px solid var(--border);border-radius:var(--r);padding:8px;resize:vertical";
+    ta.readOnly = true;
+    const wrap = document.createElement("div");
+    wrap.className = "db-section";
+    wrap.innerHTML = '<div class="db-section-title">Script — copy manually then paste into swgoh.gg console</div>';
+    wrap.appendChild(ta);
+    const res = document.getElementById("scoutResults");
+    res.innerHTML = "";
+    res.appendChild(wrap);
+    toast("Clipboard blocked — copy from the box below");
+  });
+}
+
+
+function scoutHandleImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.rounds) { toast("Invalid scout file"); return; }
+      scoutData = data;
+      // Restore ally code + event ID fields
+      if (data.allyCode) document.getElementById("scoutAllyCode").value = data.allyCode;
+      if (data.eventId)  document.getElementById("scoutEventId").value  = data.eventId;
+      ls.set("gac_scout_state", JSON.stringify({ allyCode: data.allyCode, eventId: data.eventId }));
+      scoutActiveRound = "all";
+      scoutRender();
+      toast("Scout data imported!");
+    } catch(err) {
+      toast("Failed to parse JSON: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = "";
+}
+
+function scoutRender() {
+  const roundTabs = document.getElementById("scoutRoundTabs");
+  const summary   = document.getElementById("scoutSummary");
+  const results   = document.getElementById("scoutResults");
+
+  const availRounds = Object.keys(scoutData.rounds).filter(r => scoutData.rounds[r].length > 0);
+  if (availRounds.length === 0) {
+    results.innerHTML = `<div class="scout-error">⚠ No defense data found. The profile may be private, or the fetch was blocked by CORS (must be run on swgoh.gg). <br><br>
+      <strong>Workaround:</strong> Open swgoh.gg in your browser, open DevTools Console, and paste this fetch command to get the data, then import it here (coming soon).</div>`;
+    roundTabs.style.display = "none";
+    summary.style.display = "none";
+    return;
+  }
+
+  roundTabs.style.display = "flex";
+  const tabBtns = ["all", ...availRounds];
+  roundTabs.innerHTML = tabBtns.map(r => `
+    <button class="scout-round-btn${r===scoutActiveRound?" active":""}" onclick="scoutSetRound('${r}')">
+      ${r==="all"?"All Rounds":"Round "+r}
+    </button>`).join("");
+
+  // Build zoned data — zone comes directly from SVG parsing, no inference needed
+  const byZone = { north:[], south:[], back:[], ship:[] };
+
+  function dedupeByZone(battles) {
+    // Within a zone, deduplicate multiple attempts on the same slot
+    // Same defCode + same zone = same slot, multiple attempts
+    const seen = {};
+    const deduped = [];
+    battles.forEach(b => {
+      const key = b.defCode + "|" + b.zone;
+      if (!seen[key]) {
+        seen[key] = b;
+        deduped.push({...b});
+      } else {
+        seen[key].attempts = Math.max(seen[key].attempts||1, b.attempts||1);
+        if (b.outcome === "Win") seen[key].outcome = "Win";
+      }
+    });
+    return deduped;
+  }
+
+  availRounds.forEach(r => {
+    const allBattles = scoutData.rounds[r] || [];
+    const deduped = dedupeByZone(allBattles);
+    deduped.forEach(b => {
+      const zone = b.zone || (b.isShip ? "ship" : "unknown");
+      if (byZone[zone]) byZone[zone].push({...b, round:r});
+    });
+  });
+
+  // Filter by active round if needed
+  if (scoutActiveRound !== "all") {
+    Object.keys(byZone).forEach(z => {
+      byZone[z] = byZone[z].filter(b => b.round === scoutActiveRound);
+    });
+  }
+
+  const groundAll = [...byZone.north, ...byZone.south, ...byZone.back];
+  const uniqueGround = new Set(groundAll.map(b=>b.defCode)).size;
+  const freqMap = {};
+  groundAll.forEach(b => { freqMap[b.defCode] = (freqMap[b.defCode]||0)+1; });
+  const repeated = Object.values(freqMap).filter(c=>c>=2).length;
+
+  summary.style.display = "grid";
+  summary.innerHTML = `
+    <div class="stat"><div class="stat-lbl">Rounds loaded</div><div class="stat-val">${availRounds.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Ground defs seen</div><div class="stat-val">${groundAll.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Unique squads</div><div class="stat-val">${uniqueGround}</div></div>
+    <div class="stat"><div class="stat-lbl">Used 2+ rounds</div><div class="stat-val" style="color:var(--accent)">${repeated}</div></div>`;
+
+  const zones = [
+    { key:"north", label:"North Zone", cls:"scout-zone-north" },
+    { key:"south", label:"South Zone", cls:"scout-zone-south" },
+    { key:"back",  label:"Back Zone",  cls:"scout-zone-back"  },
+  ];
+
+  let html = "";
+
+  zones.forEach(z => {
+    if (!byZone[z.key].length) return;
+    html += `<div class="scout-zone-block ${z.cls}">
+      <div class="scout-zone-title">⚔ ${z.label}</div>`;
+
+    if (scoutActiveRound === "all") {
+      const defMap = {};
+      byZone[z.key].forEach(b => {
+        if (!defMap[b.defCode]) defMap[b.defCode] = [];
+        defMap[b.defCode].push(b);
+      });
+      Object.entries(defMap).sort((a,b)=>b[1].length-a[1].length).forEach(([code, bList]) => {
+        const name = scoutCodeToName(code);
+        const wins = bList.filter(b=>b.outcome==="Win").length;
+        const held = bList.filter(b=>b.outcome==="Loss"||b.outcome==="Draw").length;
+        const maxAtt = Math.max(...bList.map(b=>b.attempts||1));
+        const freq = bList.length;
+        const countersUsed = [...new Set(bList.filter(b=>b.attackerCode).map(b=>scoutCodeToName(b.attackerCode)))];
+        const outcomeColor = held > 0 ? "var(--red)" : wins === freq ? "var(--green)" : "var(--yellow)";
+        html += `<div class="scout-def-row">
+          <div>
+            <span class="scout-def-name">${name}</span>
+            ${freq>=2?`<span class="scout-freq-badge">×${freq}</span>`:""}
+          </div>
+          <div class="scout-counters">
+            ${countersUsed.map(c=>{
+              const dbMatch = (DB["3v3"][name]||[]).find(([cn])=>cn===c);
+              const cls = dbMatch ? (dbMatch[1]>=90?"seen-hi":dbMatch[1]>=75?"seen-med":"") : "";
+              return `<span class="scout-ctr-pill ${cls}" title="${dbMatch?dbMatch[1]+'% win rate':'Used as counter'}">${c}</span>`;
+            }).join("")||`<span style="color:var(--muted);font-size:11px">No counter data</span>`}
+          </div>
+          <div class="scout-attempts${maxAtt>=3?" many":""}">
+            <span style="color:${outcomeColor}">${wins}W/${held}H</span>
+            ${maxAtt>1?`<br><span style="color:var(--red)">max ${maxAtt} att</span>`:""}
+          </div>
+        </div>`;
+      });
+    } else {
+      byZone[z.key].forEach(b => {
+        const name = scoutCodeToName(b.defCode);
+        const ctrName = b.attackerCode ? scoutCodeToName(b.attackerCode) : null;
+        const dbMatch = ctrName ? (DB["3v3"][name]||[]).find(([cn])=>cn===ctrName) : null;
+        const pillCls = dbMatch ? (dbMatch[1]>=90?"seen-hi":dbMatch[1]>=75?"seen-med":"") : "";
+        const outcomeColor = b.outcome==="Win"?"var(--green)":b.outcome==="Loss"?"var(--red)":b.outcome==="Retreat"?"var(--yellow)":"var(--muted)";
+        html += `<div class="scout-def-row">
+          <div><span class="scout-def-name">${name}</span></div>
+          <div class="scout-counters">${ctrName?`<span class="scout-ctr-pill ${pillCls}">${ctrName}</span>`:`<span style="color:var(--muted);font-size:11px">—</span>`}</div>
+          <div class="scout-attempts${(b.attempts||1)>=3?" many":""}">
+            <span style="color:${outcomeColor}">${b.outcome}</span>
+            ${(b.attempts||1)>1?`<br>${b.attempts} att`:""}
+          </div>
+        </div>`;
+      });
+    }
+    html += `</div>`;
+  });
+
+  // Ships
+  if (byZone.ship.length) {
+    html += `<div class="scout-zone-block scout-zone-ship"><div class="scout-zone-title">🚀 Ships</div>`;
+    if (scoutActiveRound === "all") {
+      const defMap = {};
+      byZone.ship.forEach(b => { if(!defMap[b.defCode])defMap[b.defCode]=[]; defMap[b.defCode].push(b); });
+      Object.entries(defMap).sort((a,b)=>b[1].length-a[1].length).forEach(([code,bList])=>{
+        const name = scoutCodeToName(code);
+        const wins = bList.filter(b=>b.outcome==="Win").length;
+        const held = bList.filter(b=>b.outcome==="Loss"||b.outcome==="Draw").length;
+        const freq = bList.length;
+        const ctrs = [...new Set(bList.filter(b=>b.attackerCode).map(b=>scoutCodeToName(b.attackerCode)))];
+        html += `<div class="scout-def-row">
+          <div><span class="scout-def-name">${name}</span>${freq>=2?`<span class="scout-freq-badge">×${freq}</span>`:""}</div>
+          <div class="scout-counters">${ctrs.map(c=>`<span class="scout-ctr-pill">${c}</span>`).join("")||`<span style="color:var(--muted);font-size:11px">No data</span>`}</div>
+          <div class="scout-attempts"><span style="color:${held>0?"var(--red)":"var(--green)"}">${wins}W/${held}H</span></div>
+        </div>`;
+      });
+    } else {
+      byZone.ship.forEach(b=>{
+        const name = scoutCodeToName(b.defCode);
+        const ctrName = b.attackerCode ? scoutCodeToName(b.attackerCode) : null;
+        const outcomeColor = b.outcome==="Win"?"var(--green)":b.outcome==="Loss"?"var(--red)":"var(--yellow)";
+        html += `<div class="scout-def-row">
+          <div><span class="scout-def-name">${name}</span></div>
+          <div class="scout-counters">${ctrName?`<span class="scout-ctr-pill">${ctrName}</span>`:`<span style="color:var(--muted);font-size:11px">—</span>`}</div>
+          <div class="scout-attempts"><span style="color:${outcomeColor}">${b.outcome}</span></div>
+        </div>`;
+      });
+    }
+    html += `</div>`;
+  }
+
+  // Send to planner
+  if (groundAll.length > 0) {
+    html += `<div style="margin-top:10px;padding:10px 14px;background:var(--surface);border-radius:var(--r);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--muted)">📋 Top defenders per zone ready</span>
+      <button class="btn sm primary" onclick="scoutSendToPlanner()" style="font-size:12px">→ Load into Planner</button>
+      <span style="font-size:11px;color:var(--muted)">Fills the Planner with the most-used defenders, then you can run Solve</span>
+    </div>`;
+  }
+
+  if (!html) html = `<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">No defense data to display.</div>`;
+  results.innerHTML = html;
+}
+
+
+function scoutSetRound(r) {
+  scoutActiveRound = r;
+  scoutRender();
+}
+
+function scoutSendToPlanner() {
+  // Collect most-frequent defenders per zone from all rounds data
+  const byZone = { north:[], south:[], back:[], ship:[] };
+  const availRounds = Object.keys(scoutData.rounds).filter(r=>scoutData.rounds[r].length>0);
+  availRounds.forEach(r => {
+    (scoutData.rounds[r]||[]).forEach(b => {
+      const zone = b.zone || (b.isShip ? "ship" : null);
+      if (zone && byZone[zone]) byZone[zone].push(b);
+    });
+  });
+
+  const topN = (arr, n) => {
+    const freq = {};
+    arr.forEach(b=>{ freq[b.defCode]=(freq[b.defCode]||0)+1; });
+    return Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,n).map(([c])=>scoutCodeToName(c));
+  };
+
+  const mode = curMode;
+  const zoneCounts = mode==="3v3" ? {north:5,south:5,back:5,ships:3} : {north:4,south:4,back:3,ships:3};
+
+  ["north","south","back"].forEach(z => {
+    const tops = topN(byZone[z], zoneCounts[z]);
+    tops.forEach((name,i) => { if(i < slots[mode][z].length) slots[mode][z][i] = name; });
+  });
+  const shipTops = topN(byZone.ship, zoneCounts.ships);
+  shipTops.forEach((name,i) => { if(i < slots[mode].ships.length) slots[mode].ships[i] = name; });
+
+  ls.set("gac_slots_"+mode, JSON.stringify(slots[mode]));
+  showTab("planner", document.querySelectorAll(".tab-btn")[0]);
+  renderZones();
+  toast("Loaded most-used defenders into Planner — run Solve!");
+}
+
+function scoutRestoreState() {
+  const saved = ls.get("gac_scout_state");
+  if (!saved) return;
+  const s = JSON.parse(saved);
+  if (s.allyCode) document.getElementById("scoutAllyCode").value = s.allyCode;
+  if (s.eventId)  document.getElementById("scoutEventId").value  = s.eventId;
+}
+
 // INIT
 loadAll();
 setMode("3v3");
 dbInit();
+scoutRestoreState();
 
 </script>
 </body>

@@ -1,0 +1,2003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWGOH GAC Planner</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d26;--s2:#22263a;--border:#2e3347;--b2:#3d4260;
+  --text:#e8eaf0;--muted:#7a7f9a;--accent:#4f7fff;
+  --green:#22c55e;--gbg:rgba(34,197,94,.12);
+  --yellow:#eab308;--ybg:rgba(234,179,8,.12);
+  --red:#ef4444;--rbg:rgba(239,68,68,.12);
+  --north-c:#ef4444;--north-bg:rgba(239,68,68,.07);
+  --south-c:#4f7fff;--south-bg:rgba(79,127,255,.07);
+  --back-c:#888;--back-bg:rgba(136,136,136,.07);
+  --ship-c:#f59e0b;--ship-bg:rgba(245,158,11,.07);
+  --r:8px;--rl:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+.app{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:18px;font-weight:600}
+.subtitle{color:var(--muted);font-size:11px;margin-top:3px}
+
+.tabs{display:flex;gap:2px;background:var(--surface);border-radius:var(--r);padding:3px;width:fit-content;margin:14px 0 16px}
+.tab-btn{padding:6px 16px;border-radius:6px;font-size:13px;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:.15s;font-family:inherit}
+.tab-btn.active{background:var(--s2);color:var(--text);font-weight:500}
+.tab-btn:hover:not(.active){color:var(--text)}
+.panel{display:none}.panel.active{display:block}
+
+.mode-row{display:flex;gap:4px;margin-bottom:14px}
+.mode-btn{padding:5px 14px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;transition:.15s}
+.mode-btn.active{background:var(--s2);color:var(--text);border-color:var(--b2);font-weight:500}
+.mode-btn:hover:not(.active){color:var(--text)}
+
+.zone-lbl{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.zone-north .zone-lbl{color:var(--north-c)}
+.zone-south .zone-lbl{color:var(--south-c)}
+.zone-back  .zone-lbl{color:var(--back-c)}
+.zone-ship  .zone-lbl{color:var(--ship-c)}
+.slot-grid{display:grid;gap:6px;margin-bottom:14px}
+.g5{grid-template-columns:repeat(5,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+
+input[type=text],textarea{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);padding:7px 10px;font-size:12px;outline:none;font-family:inherit;transition:border-color .15s}
+input[type=text]:focus,textarea:focus{border-color:var(--accent)}
+input[type=text]::placeholder{color:var(--muted);font-size:12px}
+.zone-north input:not(:placeholder-shown){border-color:rgba(239,68,68,.5);background:var(--north-bg)}
+.zone-south input:not(:placeholder-shown){border-color:rgba(79,127,255,.5);background:var(--south-bg)}
+.zone-back  input:not(:placeholder-shown){border-color:rgba(136,136,136,.4);background:var(--back-bg)}
+.zone-ship  input:not(:placeholder-shown){border-color:rgba(245,158,11,.5);background:var(--ship-bg)}
+
+.btn-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0 16px}
+.btn{padding:8px 18px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--b2);background:var(--s2);color:var(--text);font-family:inherit;transition:.15s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{background:#3d6fe0;border-color:#3d6fe0;color:#fff}
+.btn.sm{padding:5px 12px;font-size:12px}
+.warn{font-size:11px;color:var(--yellow)}
+
+/* RESULTS */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.stat{background:var(--surface);border-radius:var(--r);padding:10px 12px}
+.stat-lbl{font-size:11px;color:var(--muted);margin-bottom:3px}
+.stat-val{font-size:22px;font-weight:600}
+.result-block{background:var(--surface);border-radius:var(--rl);padding:12px 14px;margin-bottom:8px}
+.result-block.north{border-left:3px solid var(--north-c)}
+.result-block.south{border-left:3px solid var(--south-c)}
+.result-block.back{border-left:3px solid var(--back-c)}
+.result-block.ship{border-left:3px solid var(--ship-c)}
+.r-row{display:grid;grid-template-columns:1fr 14px 1fr 56px 72px;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.r-row:last-child{border-bottom:none}
+.r-def{font-size:13px;color:var(--muted)}
+.r-arr{color:var(--b2);font-size:11px;text-align:center}
+.r-ctr{font-size:13px;font-weight:500}
+.chip{font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px;text-align:center;white-space:nowrap}
+.chip-hi{background:var(--gbg);color:var(--green)}
+.chip-mid{background:var(--ybg);color:var(--yellow)}
+.chip-lo{background:var(--rbg);color:var(--red)}
+.chip-un{background:var(--s2);color:var(--muted)}
+
+/* LOOKUP */
+.tag-wrap{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
+.tag{padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;transition:.15s}
+.tag:hover{border-color:var(--accent);color:var(--accent)}
+.tag.sel{background:rgba(79,127,255,.15);border-color:var(--accent);color:var(--accent)}
+.ctable{background:var(--surface);border-radius:var(--rl);overflow:hidden}
+.ct-row{display:grid;grid-template-columns:1fr 56px 60px;padding:8px 14px;border-bottom:1px solid var(--border);align-items:center}
+.ct-row:last-child{border-bottom:none}
+.ct-row:nth-child(even){background:rgba(255,255,255,.02)}
+.ct-n{font-size:11px;color:var(--muted);text-align:right}
+
+/* ROSTER */
+.rcard{background:var(--surface);border-radius:var(--rl);padding:16px;margin-bottom:12px}
+.rlbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+textarea{resize:vertical;margin-bottom:10px}
+.pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.pill{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--s2);border:1px solid var(--border);color:var(--muted)}
+.infobox{background:rgba(79,127,255,.08);border:1px solid rgba(79,127,255,.2);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6}
+.infobox strong{color:var(--text)}
+
+.toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:10px 18px;border-radius:var(--r);font-size:13px;font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
+.toast.show{opacity:1}
+
+/* Custom entry form */
+.cform{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-top:10px}
+.cform-row{display:grid;grid-template-columns:1fr 140px auto;gap:8px;align-items:center}
+.pct-range{display:flex;align-items:center;gap:6px}
+.pct-range input[type=range]{flex:1;background:transparent;border:none;padding:0;cursor:pointer}
+.pct-lbl{min-width:36px;font-size:12px;color:var(--text);text-align:right}
+
+/* SCOUT */
+.scout-input-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:12px}
+.scout-input-row label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+.scout-round-tabs{display:flex;gap:3px;margin-bottom:14px;flex-wrap:wrap}
+.scout-round-btn{padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;transition:.15s}
+.scout-round-btn.active{background:var(--s2);color:var(--text);border-color:var(--b2)}
+.scout-round-btn:hover:not(.active){color:var(--text)}
+.scout-zone-block{background:var(--surface);border-radius:var(--rl);padding:12px 14px;margin-bottom:10px}
+.scout-zone-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--border)}
+.scout-zone-north .scout-zone-title{color:var(--north-c)}
+.scout-zone-south .scout-zone-title{color:var(--south-c)}
+.scout-zone-back  .scout-zone-title{color:var(--back-c)}
+.scout-zone-ship  .scout-zone-title{color:var(--ship-c)}
+.scout-def-row{display:grid;grid-template-columns:160px 1fr auto;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.scout-def-row:last-child{border-bottom:none}
+.scout-def-name{font-weight:500;color:var(--text)}
+.scout-counters{display:flex;flex-wrap:wrap;gap:4px}
+.scout-ctr-pill{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--s2);border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:.1s}
+.scout-ctr-pill:hover{border-color:var(--accent);color:var(--accent)}
+.scout-ctr-pill.seen-hi{border-color:rgba(34,197,94,.4);color:var(--green)}
+.scout-ctr-pill.seen-med{border-color:rgba(234,179,8,.3);color:var(--yellow)}
+.scout-attempts{font-size:10px;color:var(--muted);white-space:nowrap;text-align:right}
+.scout-attempts.many{color:var(--red)}
+.scout-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.scout-summary .stat{background:var(--surface);border-radius:var(--r);padding:10px 12px}
+.scout-loading{color:var(--muted);font-size:13px;padding:20px 0;text-align:center}
+.scout-error{color:var(--red);font-size:12px;padding:10px 0}
+.scout-freq-badge{font-size:10px;background:rgba(79,127,255,.15);color:var(--accent);border:1px solid rgba(79,127,255,.3);border-radius:3px;padding:1px 5px;margin-left:4px}
+.planner-import-btn{font-size:11px;padding:2px 8px;border-radius:4px;background:rgba(79,127,255,.12);border:1px solid rgba(79,127,255,.3);color:var(--accent);cursor:pointer;font-family:inherit;transition:.1s;white-space:nowrap}
+.planner-import-btn:hover{background:rgba(79,127,255,.25)}
+
+
+.db-section{background:var(--surface);border-radius:var(--rl);padding:14px;margin-bottom:12px}
+.db-section-title{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.db-table{width:100%;border-collapse:collapse;font-size:12px}
+.db-table th{text-align:left;color:var(--muted);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--border);font-size:11px}
+.db-table td{padding:6px 8px;border-bottom:1px solid rgba(46,51,71,.5);vertical-align:middle}
+.db-table tr:last-child td{border-bottom:none}
+.db-table tr:hover td{background:rgba(255,255,255,.02)}
+.db-code{font-family:monospace;font-size:11px;color:var(--muted)}
+.db-status-ok{color:var(--green);font-size:11px}
+.db-status-empty{color:var(--red);font-size:11px}
+.db-status-pending{color:var(--yellow);font-size:11px}
+.db-add-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:center;margin-top:10px}
+.fetch-log{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:10px;font-size:11px;font-family:monospace;color:var(--muted);height:120px;overflow-y:auto;margin-top:10px;white-space:pre-wrap}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+
+</style>
+</head>
+<body>
+<div class="app">
+
+<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+  <div>
+    <h1>⚔ SWGOH GAC Planner</h1>
+    <div class="subtitle" id="dbMeta"></div>
+  </div>
+  <button class="btn sm" onclick="showTab('dbmanager',document.querySelectorAll('.tab-btn')[4])">⚙ DB Manager</button>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('planner',this)">Planner</button>
+  <button class="tab-btn" onclick="showTab('roster',this)">Roster</button>
+  <button class="tab-btn" onclick="showTab('lookup',this)">Lookup</button>
+  <button class="tab-btn" onclick="showTab('scout',this)">🔍 Scout</button>
+  <button class="tab-btn" onclick="showTab('dbmanager',this)">DB Manager</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PLANNER
+══════════════════════════════════════════ -->
+<div id="panel-planner" class="panel active">
+  <div class="mode-row">
+    <button class="mode-btn active" id="modeBtn-3v3" onclick="setMode('3v3')">3v3</button>
+    <button class="mode-btn" id="modeBtn-5v5" onclick="setMode('5v5')">5v5</button>
+  </div>
+  <div id="zoneArea"></div>
+  <div class="btn-row">
+    <button class="btn primary" onclick="runSolve()">Solve ↗</button>
+    <button class="btn" onclick="clearAll()">Clear</button>
+    <span class="warn" id="rosterWarn"></span>
+  </div>
+  <div id="results"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     ROSTER
+══════════════════════════════════════════ -->
+<div id="panel-roster" class="panel">
+  <div class="infobox">Enter your available counter teams below. The solver will only assign these when you have a roster saved. Leave empty to see all possible counters.</div>
+  <div class="rcard">
+    <div class="rlbl">Ground roster — 3v3 &amp; 5v5</div>
+    <textarea id="groundTxt" rows="16" placeholder="Jedi Master Kenobi&#10;Leia Organa&#10;Sith Eternal Emperor&#10;Supreme Leader Kylo Ren&#10;Bo-Katan (Mand'alor)&#10;Darth Bane&#10;..."></textarea>
+    <button class="btn primary" onclick="saveGround()">Save ground roster</button>
+    <div class="pills" id="groundPills"></div>
+  </div>
+  <div class="rcard">
+    <div class="rlbl">Fleet roster — capital ships</div>
+    <textarea id="shipTxt" rows="6" placeholder="Profundity&#10;Executor&#10;Leviathan&#10;Endurance&#10;..."></textarea>
+    <button class="btn primary" onclick="saveShips()">Save fleet roster</button>
+    <div class="pills" id="shipPills"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     LOOKUP
+══════════════════════════════════════════ -->
+<div id="panel-lookup" class="panel">
+  <div class="mode-row">
+    <button class="mode-btn active" id="lmodeBtn-3v3" onclick="setLMode('3v3')">3v3</button>
+    <button class="mode-btn" id="lmodeBtn-5v5" onclick="setLMode('5v5')">5v5</button>
+    <button class="mode-btn" id="lmodeBtn-ships" onclick="setLMode('ships')">Ships</button>
+  </div>
+  <div id="lShipNote" style="display:none;font-size:11px;color:var(--ship-c);margin-bottom:8px">🚀 Ship counter lookup — capital ships only</div>
+  <input type="text" id="lSearch" placeholder="Search defender…" oninput="renderTags()" style="margin-bottom:10px">
+  <div class="tag-wrap" id="tagArea"></div>
+  <div id="lookupResult"></div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     DB MANAGER
+══════════════════════════════════════════ -->
+<div id="panel-dbmanager" class="panel">
+  <div class="infobox">Set the current season numbers below, then use <strong>↻ Refresh all</strong> weekly to pull fresh counter data from swgoh.gg. Season numbers are shown on swgoh.gg — 3v3 and 5v5 run on different schedules. Ships always use the highest current season.</div>
+
+  <!-- Season settings -->
+  <div class="db-section">
+    <div class="db-section-title">Season Settings</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end">
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">3v3 Season #</div>
+        <input type="number" id="season-3v3" min="1" style="width:100%" placeholder="e.g. 79" oninput="dbSaveSeasons()">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">5v5 Season #</div>
+        <input type="number" id="season-5v5" min="1" style="width:100%" placeholder="e.g. 78" oninput="dbSaveSeasons()">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Ships Season #</div>
+        <input type="number" id="season-ships" min="1" style="width:100%" placeholder="e.g. 79" oninput="dbSaveSeasons()">
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px">Season numbers are saved automatically. URL used: <code style="color:var(--accent)">…/gac/counters/CODE/?season_id=CHAMPIONSHIPS_GRAND_ARENA_GA2_EVENT_SEASON_<strong>N</strong></code></div>
+  </div>
+
+  <!-- Ground characters -->
+  <div class="db-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="db-section-title">Ground Defenders (3v3)</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn sm" onclick="dbFetchMissing('3v3')">⬇ Fetch missing</button>
+        <button class="btn sm" onclick="dbFetchAll('3v3')">↻ Refresh all</button>
+      </div>
+    </div>
+    <table class="db-table">
+      <thead><tr><th>Name</th><th>Code</th><th>Counters</th><th>Action</th></tr></thead>
+      <tbody id="dbTable-3v3"></tbody>
+    </table>
+    <div class="db-add-row">
+      <input type="text" id="dbAdd-name-3v3" placeholder="Display name (e.g. Dash Rendar)">
+      <input type="text" id="dbAdd-code-3v3" placeholder="swgoh.gg code (e.g. DASHRENDAR)">
+      <button class="btn sm primary" onclick="dbAddEntry('3v3')">+ Add</button>
+    </div>
+  </div>
+
+  <!-- Ground 5v5 -->
+  <div class="db-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="db-section-title">Ground Defenders (5v5)</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn sm" onclick="dbFetchMissing('5v5')">⬇ Fetch missing</button>
+        <button class="btn sm" onclick="dbFetchAll('5v5')">↻ Refresh all</button>
+      </div>
+    </div>
+    <table class="db-table">
+      <thead><tr><th>Name</th><th>Code</th><th>Counters</th><th>Action</th></tr></thead>
+      <tbody id="dbTable-5v5"></tbody>
+    </table>
+    <div class="db-add-row">
+      <input type="text" id="dbAdd-name-5v5" placeholder="Display name (e.g. Dash Rendar)">
+      <input type="text" id="dbAdd-code-5v5" placeholder="swgoh.gg code (e.g. DASHRENDAR)">
+      <button class="btn sm primary" onclick="dbAddEntry('5v5')">+ Add</button>
+    </div>
+  </div>
+
+  <!-- Ships -->
+  <div class="db-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="db-section-title">Capital Ships</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn sm" onclick="dbFetchMissing('ships')">⬇ Fetch missing</button>
+        <button class="btn sm" onclick="dbFetchAll('ships')">↻ Refresh all</button>
+      </div>
+    </div>
+    <table class="db-table">
+      <thead><tr><th>Name</th><th>Code</th><th>Counters</th><th>Action</th></tr></thead>
+      <tbody id="dbTable-ships"></tbody>
+    </table>
+    <div class="db-add-row">
+      <input type="text" id="dbAdd-name-ships" placeholder="Display name (e.g. Endurance)">
+      <input type="text" id="dbAdd-code-ships" placeholder="swgoh.gg code (e.g. CAPITALENDURANCE)">
+      <button class="btn sm primary" onclick="dbAddEntry('ships')">+ Add</button>
+    </div>
+  </div>
+
+  <!-- Weekly refresh workflow -->
+  <div class="db-section">
+    <div class="db-section-title">Weekly Refresh Workflow</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
+      1. Set season numbers above &nbsp;→&nbsp; 2. Generate &amp; copy the script &nbsp;→&nbsp; 3. Paste into swgoh.gg console &nbsp;→&nbsp; 4. Import the downloaded file here
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn sm primary" onclick="dbGenerateScript('3v3')">📋 Copy 3v3 script</button>
+      <button class="btn sm primary" onclick="dbGenerateScript('5v5')">📋 Copy 5v5 script</button>
+      <button class="btn sm primary" onclick="dbGenerateScript('ships')">📋 Copy ships script</button>
+      <button class="btn sm" onclick="dbImportFile()">⬆ Import counters .txt</button>
+      <input type="file" id="dbImportInput" accept=".txt" style="display:none" onchange="dbHandleImport(event)">
+    </div>
+  </div>
+
+  <!-- Fetch log -->
+  <div class="db-section">
+    <div class="db-section-title">Fetch log</div>
+    <div class="progress-bar"><div class="progress-fill" id="dbProgress" style="width:0%"></div></div>
+    <div class="fetch-log" id="fetchLog">Ready.</div>
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <button class="btn sm" onclick="document.getElementById('fetchLog').textContent='Ready.'">Clear log</button>
+      <button class="btn sm primary" onclick="dbSaveToFile()">⬇ Export DB as .js file</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCOUT
+══════════════════════════════════════════ -->
+<div id="panel-scout" class="panel">
+  <div class="infobox">
+    Scouting uses the same browser-console approach as the DB Manager — no CORS issues.
+    <strong>Workflow:</strong> Enter the opponent's ally code + event ID → Copy script → Paste into swgoh.gg console → Import the downloaded JSON here.
+  </div>
+
+  <div class="scout-input-row">
+    <div>
+      <label>Opponent Ally Code</label>
+      <input type="text" id="scoutAllyCode" placeholder="e.g. 537154498" maxlength="12" oninput="ls.set('gac_scout_state',JSON.stringify({allyCode:this.value.replace(/\D/g,''),eventId:document.getElementById('scoutEventId').value}))">
+    </div>
+    <div>
+      <label>Season Event ID (from URL)</label>
+      <input type="text" id="scoutEventId" placeholder="e.g. O1779829200000" oninput="ls.set('gac_scout_state',JSON.stringify({allyCode:document.getElementById('scoutAllyCode').value.replace(/\D/g,''),eventId:this.value}))">
+    </div>
+    <button class="btn primary" onclick="scoutGenerateScript()">📋 Copy script</button>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:14px">
+    Find the event ID in any GAC history URL: swgoh.gg/p/<strong>ALLYCODE</strong>/gac-history/<strong>O1779829200000</strong>/1/
+  </div>
+
+  <div class="db-section" style="margin-bottom:12px">
+    <div class="db-section-title">How to use</div>
+    <ol style="font-size:12px;color:var(--muted);line-height:2;padding-left:18px">
+      <li>Enter ally code + event ID above, click <strong>Copy script</strong></li>
+      <li>Open <strong>swgoh.gg</strong> in your browser (any page, must be logged in)</li>
+      <li>Open DevTools console (F12 → Console) and paste the script</li>
+      <li>A JSON file downloads automatically — come back here and import it</li>
+      <li>Click <strong>→ Load into Planner</strong> to fill your Planner slots</li>
+    </ol>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn sm primary" onclick="scoutGenerateScript()">📋 Copy scout script</button>
+      <button class="btn sm" onclick="document.getElementById('scoutImportInput').click()">⬆ Import scout JSON</button>
+      <input type="file" id="scoutImportInput" accept=".json" style="display:none" onchange="scoutHandleImport(event)">
+    </div>
+  </div>
+
+  <div id="scoutRoundTabs" class="scout-round-tabs" style="display:none"></div>
+  <div id="scoutSummary" class="scout-summary" style="display:none"></div>
+  <div id="scoutResults"></div>
+</div>
+
+</div><!-- .app -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════════
+     OVERRIDE MODAL
+══════════════════════════════════════════ -->
+<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border:1px solid var(--b2);border-radius:var(--rl);width:100%;max-width:480px;padding:20px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div id="modalTitle" style="font-weight:600;font-size:14px"></div>
+      <button class="btn sm" onclick="closeModal()" style="padding:3px 10px;font-size:16px;line-height:1">×</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// DATABASES
+// ══════════════════════════════════════════
+const DB = {
+"3v3": {
+  "Admiral Raddus":         [["Bo-Katan (Mand\'alor)",99,660],["Satele Shan",99,569],["General Skywalker",95,558],["Commander Luke Skywalker",80,528],["Wampa",94,469],["Sith Eternal Emperor",99,436],["Darth Traya",99,404],["The Great Mother",96,348],["Bossk",83,341],["Hera Syndulla",96,293]],
+  "Admiral Trench":         [["Boss Nass",99,486],["General Skywalker",98,387],["Doctor Aphra",98,195],["Wampa",95,179],["Satele Shan",100,161],["Baylan Skoll",100,118],["Bo-Katan (Mand\'alor)",100,114],["Maz Kanata",100,109],["Jedi Master Luke Skywalker",98,98],["The Great Mother",98,96]],
+  "Ahsoka Tano":         [["Sith Eternal Emperor",85,6974],["Leia Organa",91,4219],["The Great Mother",34,3037],["Supreme Leader Kylo Ren",87,2869],["The Stranger",76,580],["Baylan Skoll",4,515],["Queen Amidala",91,416],["Bo-Katan (Mand\'alor)",90,314],["Darth Bane",96,277]],
+  "Baylan Skoll":         [["Jabba the Hutt",81,8286],["Supreme Leader Kylo Ren",99,5555],["Satele Shan",80,3036],["Jedi Master Luke Skywalker",66,2844],["Baylan Skoll",87,2488],["Bo-Katan (Mand\'alor)",35,1915],["Lord Vader",88,1873],["Sith Eternal Emperor",96,1810],["The Stranger",95,1746],["Cere Junda",69,1110]],
+  "Bo-Katan (Mand\'alor)":         [["Darth Traya",93,130],["Jedi Master Luke Skywalker",86,92],["Satele Shan",90,81],["Sith Eternal Emperor",94,71],["Leia Organa",94,52],["Cere Junda",80,42],["Jabba the Hutt",81,38],["Baylan Skoll",70,37],["Darth Nihilus",91,36],["Darth Malgus",72,36]],
+  "Boba Fett (Scion of Jango)":         [["Doctor Aphra",96,880],["Queen Amidala",99,259],["Wampa",93,244],["Baylan Skoll",99,188],["Satele Shan",97,185],["Jabba the Hutt",99,142],["Cere Junda",98,136],["The Great Mother",82,135],["Emperor Palpatine",97,131],["Darth Traya",96,124]],
+  "Boss Nass":         [["Darth Traya",99,6977],["The Great Mother",95,2182],["Bo-Katan (Mand\'alor)",98,1345],["Jedi Master Luke Skywalker",99,966],["Darth Nihilus",99,818],["Mon Mothma",97,737],["Queen Amidala",98,379],["Satele Shan",98,377],["Savage Opress",99,231],["Darth Malgus",98,187]],
+  "Captain Enoch":         [["Darth Traya",99,1764],["Bo-Katan (Mand\'alor)",99,1722],["Jedi Master Luke Skywalker",99,1282],["The Great Mother",98,1148],["Darth Revan",99,1047],["Emperor Palpatine",97,932],["Padmé Amidala",99,909],["Darth Malgus",99,861],["Commander Luke Skywalker",84,809],["Satele Shan",98,757]],
+  "Carth Onasi":         [["Hunter",100,30],["Admiral Raddus",100,21],["Wampa",100,19],["Commander Luke Skywalker",100,18],["Kylo Ren",80,15],["Darth Malak",92,13],["Satele Shan",100,11],["Dash Rendar",100,8],["General Grievous",100,8],["Darth Maul",100,7]],
+  "CC-2224 'Cody'":         [["Cere Junda",98,3077],["The Great Mother",77,1398],["Third Sister",91,1262],["Queen Amidala",91,921],["Jabba the Hutt",92,774],["Stormtrooper Luke",80,674],["Darth Nihilus",78,638],["Darth Traya",70,556],["Jedi Master Luke Skywalker",77,525],["Dash Rendar",10,476]],
+  "Cere Junda":         [["Darth Malgus",99,320],["Jedi Master Kenobi",98,188],["Darth Revan",97,131],["Sith Eternal Emperor",96,113],["Baylan Skoll",80,110],["Queen Amidala",97,108],["Jabba the Hutt",95,102],["Leia Organa",98,82],["The Stranger",98,72],["Jedi Master Luke Skywalker",59,69]],
+  "Chief Chirpa":         [["Wampa",95,329],["Darth Maul",99,199],["Padmé Amidala",100,183],["Admiral Raddus",100,148],["Darth Malak",96,146],["Commander Luke Skywalker",97,120],["General Skywalker",100,73],["Baylan Skoll",100,69],["Doctor Aphra",100,69],["Darth Traya",98,68]],
+  "Chief Nebit":         [["Kylo Ren",100,47],["Wampa",100,29],["Commander Luke Skywalker",100,12],["Doctor Aphra",100,11],["Darth Malak",100,10],["Dash Rendar",100,8],["Admiral Raddus",100,7],["Hunter",100,7],["Darth Vader",85,7],["Bo-Katan (Mand\'alor)",100,5]],
+  "Commander Luke Skywalker":         [["Dark Trooper Moff Gideon",99,472],["Darth Traya",99,330],["Dash Rendar",90,319],["Commander Luke Skywalker",81,313],["CT-7567 'Rex'",100,245],["Darth Malgus",100,242],["Satele Shan",100,199],["Queen Amidala",100,189],["Third Sister",100,165],["Wampa",57,154]],
+  "CT-7567 'Rex'":         [["General Skywalker",96,1026],["Satele Shan",99,1020],["Bo-Katan (Mand\'alor)",100,570],["Darth Malgus",99,483],["Wampa",89,410],["Qui-Gon Jinn",92,374],["Jedi Master Luke Skywalker",98,358],["Darth Revan",99,355],["Sith Eternal Emperor",100,308],["Cere Junda",99,307]],
+  "Dark Trooper Moff Gideon":         [["Admiral Raddus",95,1818],["Bo-Katan (Mand\'alor)",99,985],["The Great Mother",99,775],["Boss Nass",95,289],["General Skywalker",96,288],["Wampa",86,215],["Jabba the Hutt",99,201],["Darth Malgus",99,200],["Jedi Master Luke Skywalker",99,200],["Baylan Skoll",98,198]],
+  "Darth Malgus":         [["Sith Eternal Emperor",92,1215],["Jedi Master Luke Skywalker",88,628],["Jedi Master Kenobi",98,327],["Jabba the Hutt",97,239],["General Skywalker",61,226],["Maz Kanata",91,189],["Baylan Skoll",65,126],["Darth Bane",97,82],["The Great Mother",100,77],["Leia Organa",96,76]],
+  "Darth Nihilus":         [["Jedi Master Kenobi",99,509],["Sith Eternal Emperor",76,382],["Jabba the Hutt",95,205],["Baylan Skoll",89,198],["Maz Kanata",96,193],["Queen Amidala",91,193],["Jedi Master Luke Skywalker",83,168],["Leia Organa",98,123],["Supreme Leader Kylo Ren",99,121],["The Great Mother",74,116]],
+  "Darth Revan":         [["Jedi Master Luke Skywalker",96,981],["Sith Eternal Emperor",95,662],["Boss Nass",78,637],["Baylan Skoll",100,556],["Bo-Katan (Mand\'alor)",98,464],["Jedi Master Kenobi",98,417],["Maz Kanata",91,342],["Qui-Gon Jinn",87,324],["Jabba the Hutt",100,272],["General Skywalker",32,207]],
+  "Darth Traya":         [["Sith Eternal Emperor",100,397],["Jedi Master Kenobi",100,206],["Jabba the Hutt",96,144],["Maz Kanata",93,107],["General Skywalker",71,100],["Baylan Skoll",84,90],["Emperor Palpatine",76,90],["Jedi Master Luke Skywalker",42,87],["Leia Organa",100,77],["Supreme Leader Kylo Ren",100,60]],
+  "Doctor Aphra":         [["Commander Luke Skywalker",87,440],["Dash Rendar",82,331],["Third Sister",99,257],["Bo-Katan (Mand\'alor)",99,229],["Queen Amidala",100,223],["Baylan Skoll",99,212],["Cere Junda",99,201],["Jedi Master Luke Skywalker",99,199],["The Great Mother",97,156],["Satele Shan",86,134]],
+  "Emperor Palpatine":         [["Jedi Master Kenobi",98,3547],["Lord Vader",99,1776],["Baylan Skoll",79,1684],["Admiral Raddus",63,1012],["Leia Organa",99,956],["Jedi Master Luke Skywalker",75,937],["Darth Malgus",67,898],["Darth Nihilus",67,881],["Boss Nass",59,861],["Maz Kanata",81,774]],
+  "Finn":         [["Doctor Aphra",85,2944],["Darth Maul",98,1421],["The Great Mother",99,1358],["Wampa",88,816],["Darth Malgus",99,715],["Third Sister",100,630],["Darth Traya",98,588],["Dash Rendar",83,546],["Commander Luke Skywalker",70,540],["Satele Shan",99,516]],
+  "General Skywalker":         [["Sith Eternal Emperor",96,431],["Bo-Katan (Mand\'alor)",97,382],["Jedi Master Luke Skywalker",98,362],["Wampa",87,211],["Jedi Master Kenobi",100,192],["Darth Maul",87,171],["Emperor Palpatine",84,164],["Jabba the Hutt",99,156],["Commander Luke Skywalker",41,147],["Queen Amidala",94,112]],
+  "Geonosian Brood Alpha":         [["Admiral Raddus",100,192],["Wampa",98,174],["Emperor Palpatine",99,141],["Darth Traya",99,112],["Darth Vader",85,99],["Doctor Aphra",98,88],["General Veers",85,80],["General Skywalker",100,50],["Commander Luke Skywalker",100,44],["Chief Nebit",84,39]],
+  "Grand Moff Tarkin":         [["Wampa",95,7662],["Darth Malgus",99,6014],["Bo-Katan (Mand\'alor)",99,3796],["Admiral Raddus",77,1570],["Jabba the Hutt",99,1449],["Darth Revan",94,1336],["Baylan Skoll",99,1286],["Darth Traya",96,1212],["Jedi Master Luke Skywalker",98,1203],["Emperor Palpatine",91,996]],
+  "IG-88":         [["Commander Luke Skywalker",100,2],["Doctor Aphra",100,2],["Wampa",100,2],["Admiral Raddus",100,1],["Hunter",100,1],["Baylan Skoll",100,1],["Bossk",100,1],["Boss Nass",100,1],["Captain Enoch",100,1],["CC-2224 'Cody'",100,1]],
+  "Inquisitor Barriss":         [["Third Sister",99,1409],["General Skywalker",92,1174],["Wampa",83,1124],["Darth Traya",97,860],["Darth Malgus",99,848],["Admiral Raddus",82,608],["Darth Nihilus",98,514],["Bo-Katan (Mand\'alor)",98,490],["Satele Shan",98,431],["Jabba the Hutt",98,353]],
+  "Jabba the Hutt":         [["Jedi Master Kenobi",97,5741],["Supreme Leader Kylo Ren",98,4357],["Lord Vader",97,3680],["Doctor Aphra",44,3671],["Queen Amidala",82,3187],["Ahsoka Tano",99,1850],["Leia Organa",82,1131],["Sith Eternal Emperor",95,690],["Wampa",61,463],["Emperor Palpatine",66,421]],
+  "Jango Fett":         [["Doctor Aphra",100,5],["Commander Luke Skywalker",100,4],["Dash Rendar",100,4],["Wampa",100,4],["Admiral Raddus",100,2],["Baylan Skoll",100,2],["Bossk",100,2],["Captain Enoch",100,2],["Cere Junda",100,2],["Emperor Palpatine",100,2]],
+  "Jedi Knight Revan":         [["Third Sister",100,23],["General Skywalker",94,17],["Padmé Amidala",100,16],["The Great Mother",100,10],["Satele Shan",100,9],["Darth Revan",100,8],["Admiral Raddus",100,7],["Doctor Aphra",85,7],["Wampa",83,6],["Baylan Skoll",100,5]],
+  "Jedi Master Kenobi":         [["Jedi Master Kenobi",87,1455],["Baylan Skoll",97,1374],["Bo-Katan (Mand\'alor)",96,1243],["Third Sister",87,769],["Leia Organa",99,533],["Jedi Master Luke Skywalker",80,243],["Satele Shan",79,193],["Lord Vader",95,184],["Supreme Leader Kylo Ren",86,83],["The Stranger",94,77]],
+  "Jedi Master Luke Skywalker":         [["Sith Eternal Emperor",99,711],["Third Sister",99,352],["Leia Organa",97,75],["Jedi Master Luke Skywalker",92,70],["Jabba the Hutt",96,59],["Jedi Master Kenobi",98,58],["Satele Shan",96,53],["The Great Mother",82,51],["Darth Bane",100,35],["The Stranger",100,31]],
+  "Jedi Master Mace Windu":         [["Jedi Master Luke Skywalker",98,6032],["Darth Traya",85,3816],["Darth Malgus",99,3217],["Third Sister",84,2691],["Darth Nihilus",86,1615],["Sith Eternal Emperor",99,1209],["The Great Mother",76,726],["Queen Amidala",98,703],["Jedi Master Kenobi",98,567],["Boss Nass",77,505]],
+  "Kelleran Beq":         [["Third Sister",93,798],["Darth Malgus",99,733],["Bo-Katan (Mand\'alor)",99,717],["Jedi Master Luke Skywalker",98,696],["Darth Traya",81,402],["The Great Mother",89,298],["Satele Shan",94,275],["Sith Eternal Emperor",98,251],["Dash Rendar",87,251],["Queen Amidala",98,220]],
+  "Kylo Ren (Unmasked)":         [["Doctor Aphra",95,20],["Hunter",100,17],["Admiral Raddus",100,14],["Captain Enoch",100,9],["Wampa",77,9],["Dash Rendar",100,8],["Jedi Master Luke Skywalker",87,8],["Baylan Skoll",100,7],["Qui-Gon Jinn",100,7],["Commander Luke Skywalker",85,7]],
+  "Leia Organa":         [["Supreme Leader Kylo Ren",85,3020],["Leia Organa",73,1677],["Darth Bane",59,1278],["The Stranger",89,1127],["Sith Eternal Emperor",78,705],["Third Sister",66,619],["Baylan Skoll",72,525],["Wampa",51,390],["Queen Amidala",65,243],["Jedi Master Kenobi",10,222]],
+  "Lord Vader":         [["Bo-Katan (Mand\'alor)",44,8681],["Darth Bane",79,4154],["Sith Eternal Emperor",87,3486],["Supreme Leader Kylo Ren",84,3205],["Maz Kanata",74,2352],["Satele Shan",59,1303],["Lord Vader",76,914],["Jedi Master Luke Skywalker",28,827],["Jedi Master Kenobi",26,688],["Baylan Skoll",58,633]],
+  "Maz Kanata":         [["Jedi Master Luke Skywalker",98,2218],["Queen Amidala",99,1186],["The Great Mother",87,874],["Third Sister",95,733],["Baylan Skoll",97,721],["Cere Junda",96,466],["Bo-Katan (Mand\'alor)",93,465],["Jabba the Hutt",97,384],["Satele Shan",91,365],["Wampa",78,319]],
+  "Mon Mothma":         [["Wampa",88,947],["General Skywalker",86,640],["Third Sister",84,580],["Baylan Skoll",96,363],["Cere Junda",97,288],["Satele Shan",88,250],["Admiral Raddus",69,223],["Queen Amidala",87,216],["Bo-Katan (Mand\'alor)",84,205],["Omega (Fugitive)",65,202]],
+  "Mother Talzin":         [["General Skywalker",100,127],["Wampa",100,110],["Hera Syndulla",100,86],["Commander Luke Skywalker",100,59],["General Veers",96,56],["Bossk",100,29],["Jedi Master Mace Windu",100,29],["Bo-Katan (Mand\'alor)",100,27],["Jedi Master Luke Skywalker",95,22],["Emperor Palpatine",100,21]],
+  "Omega (Fugitive)":         [["Doctor Aphra",98,418],["Jedi Master Luke Skywalker",99,290],["General Skywalker",97,253],["Bo-Katan (Mand\'alor)",100,236],["The Great Mother",99,201],["Satele Shan",97,151],["Queen Amidala",99,113],["Third Sister",100,88],["Baylan Skoll",100,84],["Darth Revan",98,81]],
+  "Pirate King Hondo Ohnaka":         [["Supreme Leader Kylo Ren",84,9846],["Jedi Master Kenobi",32,4824],["The Stranger",82,1570],["Cere Junda",49,662],["Leia Organa",50,606],["Baylan Skoll",35,385],["Jabba the Hutt",22,217],["Pirate King Hondo Ohnaka",71,177]],
+  "Queen Amidala":         [["Darth Bane",96,5762],["The Great Mother",74,4820],["Darth Traya",63,3095],["Jedi Master Kenobi",82,2524],["Jabba the Hutt",78,1840],["Baylan Skoll",80,1367],["Third Sister",66,1353],["Emperor Palpatine",56,1115],["Sith Eternal Emperor",97,1005],["Leia Organa",85,818]],
+  "Qui-Gon Jinn":         [["Boss Nass",98,1434],["Captain Enoch",97,1432],["Dark Trooper Moff Gideon",95,1099],["Third Sister",99,895],["Jedi Master Luke Skywalker",100,774],["Hunter",45,634],["Sith Eternal Emperor",96,555],["General Skywalker",80,385],["Bo-Katan (Mand\'alor)",100,367],["Nute Gunray",70,282]],
+  "Rey":         [["Cere Junda",49,8368],["Queen Amidala",79,6219],["Leia Organa",86,3915],["The Stranger",93,3496],["Supreme Leader Kylo Ren",76,2156],["Jedi Master Luke Skywalker",53,1453],["Jedi Master Kenobi",67,831],["Emperor Palpatine",64,557]],
+  "Satele Shan":         [["Sith Eternal Emperor",99,1541],["Third Sister",78,953],["The Great Mother",61,622],["Queen Amidala",85,400],["Leia Organa",97,279],["Jedi Master Luke Skywalker",42,195],["Darth Bane",97,165],["Jedi Master Kenobi",42,145],["Emperor Palpatine",53,140],["Baylan Skoll",56,133]],
+  "Saw Gerrera":         [["General Skywalker",75,2005],["Third Sister",73,1816],["Bo-Katan (Mand\'alor)",87,1802],["Baylan Skoll",98,1517],["Wampa",82,1481],["Cere Junda",85,443],["Darth Bane",98,382],["Jedi Master Luke Skywalker",75,301],["Leia Organa",99,279],["Admiral Raddus",48,279]],
+  "Sith Eternal Emperor":         [["Wampa",79,24],["Jedi Master Kenobi",92,13],["Sith Eternal Emperor",100,10],["Darth Bane",100,5],["Doctor Aphra",60,5],["Maz Kanata",40,5],["Baylan Skoll",100,4],["Queen Amidala",100,4],["Lord Vader",100,3]],
+  "Stormtrooper Luke":         [["Darth Revan",97,2908],["Darth Malgus",98,1540],["Jedi Master Luke Skywalker",99,1307],["Bo-Katan (Mand\'alor)",90,893],["The Great Mother",86,870],["Sith Eternal Emperor",99,861],["Satele Shan",90,574],["Baylan Skoll",94,520],["Queen Amidala",92,510],["Jabba the Hutt",96,486]],
+  "Supreme Leader Kylo Ren":         [["Darth Bane",91,680],["Jedi Master Luke Skywalker",54,630],["Jedi Master Kenobi",64,449],["Supreme Leader Kylo Ren",63,166],["Leia Organa",31,139],["The Stranger",89,111],["Lord Vader",5,35],["Sith Eternal Emperor",84,19],["Ahsoka Tano",47,19],["Pirate King Hondo Ohnaka",29,17]],
+  "The Great Mother":         [["Bo-Katan (Mand\'alor)",91,2363],["Darth Revan",94,1106],["Third Sister",96,933],["Darth Malgus",83,799],["Jedi Master Kenobi",97,598],["General Skywalker",42,598],["Baylan Skoll",78,402],["Lord Vader",99,255],["Leia Organa",99,252],["Supreme Leader Kylo Ren",99,250]],
+  "The Stranger":         [["Lord Vader",90,7772],["Satele Shan",76,4144],["Queen Amidala",65,2680],["Jedi Master Kenobi",34,2284],["The Stranger",72,1717],["Sith Eternal Emperor",69,1626],["Supreme Leader Kylo Ren",27,969],["Jabba the Hutt",19,919],["Darth Bane",46,714],["Third Sister",17,693]],
+  "Third Sister":         [["Cere Junda",97,3901],["Darth Nihilus",93,3261],["Darth Traya",38,2089],["Darth Malgus",78,2060],["Bo-Katan (Mand\'alor)",94,2037],["Darth Bane",99,2018],["Jabba the Hutt",80,1172],["Lord Vader",99,881],["Supreme Leader Kylo Ren",97,642],["Sith Eternal Emperor",64,465]],
+  "Tusken Chieftain":         [["General Skywalker",97,4663],["Grand Moff Tarkin",97,1116],["Admiral Raddus",79,772],["Wampa",78,716],["The Great Mother",99,559],["Darth Traya",96,378],["Satele Shan",97,369],["Jedi Master Luke Skywalker",99,342],["Bo-Katan (Mand\'alor)",99,271],["Doctor Aphra",48,257]],
+  "Zuckuss":         [["Doctor Aphra",88,44],["Satele Shan",96,31],["Third Sister",100,23],["Jedi Master Luke Skywalker",100,22],["Emperor Palpatine",86,22],["Darth Traya",100,19],["Wampa",88,18],["Jabba the Hutt",100,16],["Bo-Katan (Mand\'alor)",100,14],["Dark Trooper Moff Gideon",100,14]],
+  "Tarfful":         [["The Great Mother",99,393],["Darth Traya",99,325],["Wampa",82,263],["Admiral Raddus",87,228],["Darth Malgus",100,150],["Doctor Aphra",95,118],["Jedi Master Luke Skywalker",100,110],["Darth Nihilus",99,109],["Cere Junda",97,88],["Satele Shan",95,68]],
+  "Major Partagaz":         [["Jedi Master Luke Skywalker",97,1973],["Wampa",88,1428],["Admiral Raddus",75,678],["Jabba the Hutt",98,620],["Bo-Katan (Mand\'alor)",91,536],["Darth Traya",84,499],["Jedi Master Mace Windu",87,485],["Third Sister",87,428],["Baylan Skoll",96,380],["Queen Amidala",93,373]],
+  "Cassian Andor (Undercover)":         [["Queen Amidala",96,1834],["The Great Mother",93,1772],["Wampa",88,818],["Dash Rendar",92,787],["Satele Shan",97,620],["Baylan Skoll",86,617],["Darth Revan",92,590],["General Skywalker",87,569],["Jedi Master Luke Skywalker",88,556],["Jedi Master Kenobi",97,507]],
+  "Darth Maul":         [["Boss Nass",96,55],["Maz Kanata",100,45],["Admiral Raddus",82,41],["Wampa",90,33],["Bo-Katan (Mand\'alor)",100,30],["Darth Traya",96,30],["General Skywalker",79,24],["Darth Nihilus",100,17],["Grand Moff Tarkin",100,17],["Third Sister",100,16]],
+    "General Grievous":         [["Wampa",99,329],["Admiral Raddus",99,200],["Hunter",81,143],["Dark Trooper Moff Gideon",100,142],["Boss Nass",96,97],["Commander Luke Skywalker",100,94],["General Skywalker",98,94]],
+    "General Veers":         [["Commander Luke Skywalker",100,36],["Admiral Raddus",100,31],["Dash Rendar",100,13],["Baylan Skoll",100,10],["Wampa",100,10],["Captain Enoch",100,7],["Leia Organa",100,7],["Bo-Katan (Mand\'alor)",100,6],["General Skywalker",100,5],["Queen Amidala",100,5]],
+    "Hera Syndulla":         [["Padmé Amidala",92,113],["General Skywalker",100,97],["Darth Traya",98,53],["General Veers",100,40],["Wampa",80,40],["Satele Shan",96,30],["Captain Enoch",96,27],["Baylan Skoll",100,26],["Jedi Master Luke Skywalker",100,26],["Leia Organa",100,21]],
+    "Hunter":         [["Dash Rendar",100,119],["Commander Luke Skywalker",97,91],["Doctor Aphra",97,49],["Admiral Raddus",97,42],["General Veers",88,27],["Wampa",82,23],["Boss Nass",100,16],["Baylan Skoll",100,15],["General Skywalker",100,15],["Emperor Palpatine",100,14]],
+    "Iden Versio":         [["Wampa",93,581],["Admiral Raddus",97,338],["General Skywalker",99,182],["Darth Traya",100,45],["The Great Mother",97,45],["Third Sister",100,40]],
+    "Padmé Amidala":         [["The Great Mother",98,268],["Darth Traya",98,139],["Doctor Aphra",89,137],["Third Sister",100,115],["General Skywalker",96,96],["Darth Malak",93,88],["Baylan Skoll",100,59],["Admiral Raddus",45,53],["Darth Malgus",100,52],["Jedi Master Luke Skywalker",100,49]],
+    "General Syndulla":         [["Dark Trooper Moff Gideon",99,103],["Admiral Raddus",98,53],["General Skywalker",96,53],["The Great Mother",100,50],["Wampa",90,44],["Leia Organa",79,44],["Doctor Aphra",100,28],["Sith Eternal Emperor",91,24],["Grand Moff Tarkin",100,20],["Jedi Master Luke Skywalker",100,18]],
+    "Grand Inquisitor":         [["Admiral Raddus",93,293],["Darth Traya",100,185],["Darth Malgus",98,114],["Baylan Skoll",95,81],["Bo-Katan (Mand\'alor)",100,76],["Third Sister",98,66],["Leia Organa",100,48],["Jabba the Hutt",100,44],["Sith Eternal Emperor",100,40],["Cere Junda",100,37]],
+    "Dash Rendar":         [["Darth Malgus",100,198],["Dark Trooper Moff Gideon",97,187],["Baylan Skoll",99,174],["General Skywalker",88,155],["Jedi Master Luke Skywalker",100,150],["Third Sister",100,129],["Jabba the Hutt",100,124],["Commander Luke Skywalker",70,115],["Boss Nass",97,113],["Bo-Katan (Mand\'alor)",99,104]],
+    "Captain Silvo":         [["Boss Nass",96,28],["Dash Rendar",95,24],["Wampa",86,22],["Captain Enoch",89,19],["General Skywalker",100,15],["Jedi Master Luke Skywalker",100,11],["Commander Luke Skywalker",90,11],["Admiral Raddus",100,10],["Baylan Skoll",100,9],["Darth Revan",100,8]],
+  "Captain Ithano":         [["The Great Mother",100,128],["Darth Revan",95,41],["Grand Moff Tarkin",90,41],["Darth Traya",100,36],["Wampa",91,35],["Boss Nass",91,34],["Commander Luke Skywalker",96,30],["Jedi Master Luke Skywalker",96,29],["Captain Enoch",86,29],["Baylan Skoll",100,27]],
+},
+"5v5": {
+  "Admiral Raddus":         [],
+  "Admiral Trench":         [],
+  "Ahsoka Tano":         [],
+  "Baylan Skoll":         [],
+  "Bo-Katan (Mand\\'alor)":         [],
+  "Boba Fett (Scion of Jango)":         [],
+  "Boss Nass":         [],
+  "Captain Enoch":         [],
+  "Carth Onasi":         [],
+  "CC-2224 \'Cody\'":         [],
+  "Cere Junda":         [],
+  "Chief Chirpa":         [],
+  "Chief Nebit":         [],
+  "Commander Luke Skywalker":         [],
+  "CT-7567 \'Rex\'":         [],
+  "Dark Trooper Moff Gideon":         [],
+  "Darth Malgus":         [],
+  "Darth Nihilus":         [],
+  "Darth Revan":         [],
+  "Darth Traya":         [],
+  "Doctor Aphra":         [],
+  "Emperor Palpatine":         [],
+  "Finn":         [],
+  "General Skywalker":         [],
+  "Geonosian Brood Alpha":         [],
+  "Grand Moff Tarkin":         [],
+  "IG-88":         [],
+  "Inquisitor Barriss":         [],
+  "Jabba the Hutt":         [],
+  "Jango Fett":         [],
+  "Jedi Knight Revan":         [],
+  "Jedi Master Kenobi":         [],
+  "Jedi Master Luke Skywalker":         [],
+  "Jedi Master Mace Windu":         [],
+  "Kelleran Beq":         [],
+  "Kylo Ren (Unmasked)":         [],
+  "Leia Organa":         [],
+  "Lord Vader":         [],
+  "Maz Kanata":         [],
+  "Mon Mothma":         [],
+  "Mother Talzin":         [],
+  "Omega (Fugitive)":         [],
+  "Pirate King Hondo Ohnaka":         [],
+  "Queen Amidala":         [],
+  "Qui-Gon Jinn":         [],
+  "Rey":         [],
+  "Satele Shan":         [],
+  "Saw Gerrera":         [],
+  "Sith Eternal Emperor":         [],
+  "Stormtrooper Luke":         [],
+  "Supreme Leader Kylo Ren":         [],
+  "The Great Mother":         [],
+  "The Stranger":         [],
+  "Third Sister":         [],
+  "Tusken Chieftain":         [],
+  "Zuckuss":         [],
+  "Tarfful":         [],
+  "Major Partagaz":         [],
+  "Cassian Andor (Undercover)":         [],
+  "Darth Maul":         [],
+  "General Grievous":         [],
+  "General Veers":         [],
+  "Hera Syndulla":         [],
+  "Hunter":         [],
+  "Iden Versio":         [],
+  "Padmé Amidala":         [],
+  "General Syndulla":         [],
+  "Grand Inquisitor":         [],
+  "Dash Rendar":         [],
+  "Captain Silvo":         [],
+  "Captain Ithano":         [],
+},
+"ships": {
+  "Chimaera":         [["Profundity",100,72],["Negotiator",51,39],["Executor",100,38],["Leviathan",100,38],["Malevolence",84,33]],
+  "Home One":         [["Profundity",99,1461],["Leviathan",100,984],["Executor",99,858],["Malevolence",59,490],["Negotiator",29,160]],
+  "Negotiator":         [["Executor",95,1004],["Profundity",97,998],["Leviathan",98,971],["Chimaera",81,427],["Negotiator",58,252],["Malevolence",15,133]],
+  "Executor":         [["Profundity",99,2709],["Leviathan",91,1229],["Executor",74,531],["Negotiator",54,430],["Jedi Cruiser",64,402],["Executrix",47,182]],
+  "Profundity":         [["Leviathan",99,757],["Profundity",79,270],["Executor",0,83],["Malevolence",24,69],["Raddus",45,66],["Negotiator",27,51]],
+  "Malevolence":         [["Executor",99,848],["Negotiator",99,708],["Raddus",89,576],["Profundity",94,490],["Leviathan",100,394],["Malevolence",88,199],["Chimaera",91,114],["Home One",96,58]],
+    "Executrix":         [["Executor",99,238],["Profundity",92,202],["Leviathan",100,136],["Negotiator",78,85],["Home One",97,41],["Malevolence",51,35]],
+  "Leviathan":         [["Leviathan",96,2720],["Executor",30,355],["Jedi Cruiser",34,195],["Profundity",38,67]],
+}
+};
+
+// ══════════════════════════════════════════
+// ZONE CONFIGS — correct slot counts
+// ══════════════════════════════════════════
+const ZONES = {
+  "3v3": [{key:"north",label:"North",cls:"zone-north north",gcls:"g5",slots:5,db:"3v3"},
+          {key:"south",label:"South",cls:"zone-south south",gcls:"g5",slots:5,db:"3v3"},
+          {key:"back", label:"Back", cls:"zone-back  back", gcls:"g5",slots:5,db:"3v3"},
+          {key:"ships",label:"Ships",cls:"zone-ship  ship", gcls:"g3",slots:3,db:"ships"}],
+  "5v5": [{key:"north",label:"North",cls:"zone-north north",gcls:"g4",slots:4,db:"5v5"},
+          {key:"south",label:"South",cls:"zone-south south",gcls:"g4",slots:4,db:"5v5"},
+          {key:"back", label:"Back", cls:"zone-back  back", gcls:"g3",slots:3,db:"5v5"},
+          {key:"ships",label:"Ships",cls:"zone-ship  ship", gcls:"g3",slots:3,db:"ships"}],
+};
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let curMode = "3v3";
+let curLMode = "3v3";
+let groundRoster = new Set();
+let shipRoster = new Set();
+let customDB = {"3v3":{},"5v5":{},"ships":{}};
+let selDef = null;
+
+let slots = {
+  "3v3": {north:["","","","",""], south:["","","","",""], back:["","","","",""], ships:["","",""]},
+  "5v5": {north:["","","",""],    south:["","","",""],    back:["","",""],       ships:["","",""]},
+};
+
+// ══════════════════════════════════════════
+// STORAGE
+// ══════════════════════════════════════════
+const ls = {
+  get(k){try{return localStorage.getItem(k)}catch{return null}},
+  set(k,v){try{localStorage.setItem(k,v)}catch{}}
+};
+
+function loadAll(){
+  const gr=ls.get("gac_ground"); if(gr){const a=JSON.parse(gr);groundRoster=new Set(a);document.getElementById("groundTxt").value=a.join("\n");renderPills("groundPills",groundRoster);}
+  const sr=ls.get("gac_ships");  if(sr){const a=JSON.parse(sr);shipRoster=new Set(a);document.getElementById("shipTxt").value=a.join("\n");renderPills("shipPills",shipRoster);}
+  const cd=ls.get("gac_custom"); if(cd)customDB=JSON.parse(cd);
+  ["3v3","5v5"].forEach(m=>{const sv=ls.get("gac_slots_"+m);if(sv)slots[m]=JSON.parse(sv);});
+  const pp=ls.get("gac_pins"); if(pp) pins=JSON.parse(pp);
+}
+
+function saveGround(){
+  const lines=document.getElementById("groundTxt").value.split("\n").map(l=>l.trim()).filter(Boolean);
+  groundRoster=new Set(lines);ls.set("gac_ground",JSON.stringify(lines));renderPills("groundPills",groundRoster);toast("Ground roster saved");
+}
+function saveShips(){
+  const lines=document.getElementById("shipTxt").value.split("\n").map(l=>l.trim()).filter(Boolean);
+  shipRoster=new Set(lines);ls.set("gac_ships",JSON.stringify(lines));renderPills("shipPills",shipRoster);toast("Fleet roster saved");
+}
+function renderPills(id,set){
+  document.getElementById(id).innerHTML=[...set].sort().map(r=>`<span class="pill">${r}</span>`).join("");
+}
+
+// ══════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════
+function showTab(name, btn){
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("panel-"+name).classList.add("active");
+  btn.classList.add("active");
+  if(name==="lookup") renderTags();
+  if(name==="dbmanager"){ dbLoadSeasons(); dbRenderTable("3v3"); dbRenderTable("5v5"); dbRenderTable("ships"); }
+  if(name==="scout"){ scoutRestoreState(); }
+}
+
+// ══════════════════════════════════════════
+// MODE BUTTONS — fixed toggle logic
+// ══════════════════════════════════════════
+function setMode(m){
+  curMode = m;
+  ["3v3","5v5"].forEach(x=>{
+    document.getElementById("modeBtn-"+x).classList.toggle("active", x===m);
+  });
+  renderZones();
+  document.getElementById("results").innerHTML="";
+  updateWarn();
+  updateMeta();
+}
+
+function setLMode(m){
+  curLMode = m;
+  ["3v3","5v5","ships"].forEach(x=>{
+    document.getElementById("lmodeBtn-"+x).classList.toggle("active", x===m);
+  });
+  const note = document.getElementById("lShipNote");
+  if(note) note.style.display = m==="ships" ? "block" : "none";
+  selDef = null;
+  document.getElementById("lookupResult").innerHTML="";
+  renderTags();
+}
+
+// ══════════════════════════════════════════
+// ZONE RENDERING
+// ══════════════════════════════════════════
+function renderZones(){
+  const zones = ZONES[curMode];
+  const groundDefs = Object.keys(DB["3v3"]).concat(Object.keys(DB["5v5"])).filter((v,i,a)=>a.indexOf(v)===i).sort();
+  const shipDefs = Object.keys(DB["ships"]).sort();
+  let html = `<datalist id="defs-ground">${groundDefs.map(d=>`<option value="${d}">`).join("")}</datalist>`;
+  html += `<datalist id="defs-ships">${shipDefs.map(d=>`<option value="${d}">`).join("")}</datalist>`;
+  zones.forEach(z=>{
+    const listId = z.db==="ships" ? "defs-ships" : "defs-ground";
+    html += `<div class="${z.cls}"><div class="zone-lbl">${z.label}</div>
+    <div class="slot-grid ${z.gcls}">`;
+    for(let i=0;i<z.slots;i++){
+      const val=(slots[curMode][z.key][i]||"").replace(/"/g,"&quot;");
+      html += `<input type="text" list="${listId}" value="${val}" placeholder="Slot ${i+1}"
+        oninput="updateSlot('${z.key}',${i},this.value)"
+        onchange="updateSlot('${z.key}',${i},this.value)">`;
+    }
+    html += `</div></div>`;
+  });
+  document.getElementById("zoneArea").innerHTML = html;
+}
+
+function updateSlot(zone,idx,val){
+  slots[curMode][zone][idx]=val;
+  ls.set("gac_slots_"+curMode, JSON.stringify(slots[curMode]));
+  document.getElementById("results").innerHTML="";
+}
+
+function clearAll(){
+  const zones=ZONES[curMode];
+  zones.forEach(z=>{ slots[curMode][z.key]=slots[curMode][z.key].map(()=>""); });
+  ls.set("gac_slots_"+curMode, JSON.stringify(slots[curMode]));
+  clearPins();
+  renderZones();
+  document.getElementById("results").innerHTML="";
+}
+
+function updateWarn(){
+  const gWarn = groundRoster.size===0 ? "No ground roster" : "";
+  const sWarn = shipRoster.size===0 ? "no fleet roster" : "";
+  const parts = [gWarn, sWarn].filter(Boolean);
+  document.getElementById("rosterWarn").textContent = parts.length ? parts.join(" · ") + " — showing all counters" : "";
+}
+
+function updateMeta(){
+  const info = {
+    "3v3": `${Object.keys(DB["3v3"]).length} ground defenders · ${Object.keys(DB["ships"]).length} capital ships · swgoh.gg Season 79`,
+    "5v5": `${Object.keys(DB["5v5"]).length} ground defenders · ${Object.keys(DB["ships"]).length} capital ships · swgoh.gg Season 79`,
+  };
+  document.getElementById("dbMeta").textContent = info[curMode];
+}
+
+// ══════════════════════════════════════════
+// CHARACTER CODE MAP  (defender → SWGOH.GG code)
+// ══════════════════════════════════════════
+const CHAR_CODE = {
+  "Admiral Raddus":"ADMIRALRADDUS","Admiral Trench":"TRENCH",
+  "Ahsoka Tano (GL)":"GLAHSOKATANO","Baylan Skoll":"BAYLANSKOLL",
+  "Bo-Katan (Mand'alor)":"MANDALORBOKATAN","Boba Fett (Scion of Jango)":"BOBAFETTSCION",
+  "Boss Nass":"BOSSNASS","Captain Enoch":"CAPTAINENOCH",
+  "CC-2224 'Cody'":"CC2224","Cere Junda":"CEREJUNDA",
+  "Dark Trooper Moff Gideon":"MOFFGIDEONS3",  "Darth Malgus":"DARTHMALGUS","Darth Revan":"DARTHREVAN","Darth Revan (mirror)":"DARTHREVAN",
+  "Darth Traya":"DARTHTRAYA","Doctor Aphra":"DOCTORAPHRA",
+  "Doctor Aphra (mirror)":"DOCTORAPHRA",
+  "Emperor Palpatine":"EMPERORPALPATINE","Finn":"FINN",
+  "General Skywalker":"GENERALSKYWALKER","General Veers":"VEERS",
+  "Grand Moff Tarkin":"GRANDMOFFTARKIN","The Great Mother":"GREATMOTHERS",
+  "Hera Syndulla":"HERASYNDULLAS3","Inquisitor Barriss":"INQUISITORBARRISS",
+  "Jabba the Hutt":"JABBATHEHUTT","Jedi Master Kenobi":"JEDIMASTERKENOBI",
+  "Jedi Master Kenobi (mirror)":"JEDIMASTERKENOBI",
+  "Jedi Master Luke Skywalker":"GRANDMASTERLUKE",
+  "Jedi Master Luke Skywalker (mirror)":"GRANDMASTERLUKE",
+  "Jedi Master Mace Windu":"JEDIMASTERMACEWINDU","Kelleran Beq":"KELLERANBEQ",
+  "Leia Organa":"GLLEIA","Leia Organa (mirror)":"GLLEIA",
+  "Lord Vader":"LORDVADER","Maz Kanata":"MAZKANATA",
+  "Mother Talzin":"MOTHERTALZIN","Omega (Fugitive)":"OMEGAS3",
+  "Pirate King Hondo Ohnaka":"GLHONDO","Queen Amidala":"QUEENAMIDALA",
+  "Qui-Gon Jinn":"QUIGONJINN","Rey":"GLREY",
+  "Satele Shan":"SATELESHAN","Saw Gerrera":"SAWGERRERA",
+  "Sith Eternal Emperor":"SITHPALPATINE","Sith Eternal Emperor (mirror)":"SITHPALPATINE",
+  "Stormtrooper Luke":"STORMTROOPERLUKE",
+  "Supreme Leader Kylo Ren":"SUPREMELEADERKYLOREN",
+  "Tarfful":"TARFFUL","The Stranger":"STRANGER","Third Sister":"THIRDSISTER",
+  "Tusken Chieftain":"TUSKENCHIEFTAIN",  // Ships
+  "Executor":"CAPITALEXECUTOR","Leviathan":"CAPITALLEVIATHAN",
+  "Profundity":"CAPITALPROFUNDITY","Negotiator":"CAPITALNEGOTIATOR",
+  "Home One":"CAPITALHOMEONE","Raddus":"CAPITALRADDUS",
+  "Finalizer":"CAPITALFINALIZER","Malevolence":"CAPITALMALEVOLENCE",
+  "Executrix":"CAPITALEXECUTRIX","Chimaera":"CAPITALCHIMAERA",
+  "Endurance":"CAPITALENDURANCE",
+  "Leviathan (mirror)":"CAPITALLEVIATHAN","Profundity (mirror)":"CAPITALPROFUNDITY",
+};
+
+function swgohLink(defender, counter, isShip){
+  const dc = CHAR_CODE[defender];
+  const cc = CHAR_CODE[counter];
+  if(!dc || !cc) return null;
+  const base = isShip
+    ? `https://swgoh.gg/gac/ship-counters/${dc}/`
+    : `https://swgoh.gg/gac/counters/${dc}/`;
+  return `${base}?a_lead=${cc}&sort=count`;
+}
+
+// ══════════════════════════════════════════
+// PINS  (manual overrides before re-solve)
+// ══════════════════════════════════════════
+// pins[mode] = { defenderName: { counter, pct, isShip } }
+let pins = {"3v3":{},"5v5":{}};
+
+function pinAssignment(def, counter, pct, isShip){
+  if(!pins[curMode]) pins[curMode]={};
+  pins[curMode][def] = {counter, pct, isShip};
+  // persist
+  ls.set("gac_pins", JSON.stringify(pins));
+  // re-run solve respecting this pin
+  runSolve();
+}
+
+function unpin(def){
+  if(pins[curMode]) delete pins[curMode][def];
+  ls.set("gac_pins", JSON.stringify(pins));
+  runSolve();
+}
+
+function clearPins(){
+  pins[curMode]={};
+  ls.set("gac_pins", JSON.stringify(pins));
+}
+
+function keepPinsResolve(){
+  // Already pinned — just re-run the solver (pins are already set, runSolve respects them)
+  runSolve();
+}
+
+// ══════════════════════════════════════════
+// SOLVER
+// ══════════════════════════════════════════
+function getOpts(defender, dbKey){
+  const db=DB[dbKey];
+  const base=(db[defender]||[]).map(([c,p])=>[c,p]);
+  const custom=(customDB[dbKey][defender]||[]);
+  const merged=[...base];
+  custom.forEach(([c,p])=>{const i=merged.findIndex(([cc])=>cc===c);if(i>=0)merged[i]=[c,p];else merged.push([c,p]);});
+  const rs = dbKey==="ships" ? shipRoster : groundRoster;
+  return rs.size>0 ? merged.filter(([c])=>rs.has(c)).sort((a,b)=>b[1]-a[1]) : merged.sort((a,b)=>b[1]-a[1]);
+}
+
+function solveGroup(defs, dbKey, preUsed, preAsgn){
+  // defs: defenders to solve (excluding pinned ones)
+  // preUsed: Set of counters already consumed by pins
+  // preAsgn: existing assignments from pins (merged into result)
+  const optMap={};
+  defs.forEach(d=>{
+    // filter out pre-used counters
+    const opts = getOpts(d, dbKey).filter(([c])=>!preUsed.has(c));
+    optMap[d] = opts;
+  });
+  const sorted=[...defs].sort((a,b)=>optMap[a].length-optMap[b].length);
+  const best={score:-1,asgn:null};
+  function bt(i,used,asgn,score){
+    if(i===sorted.length){if(score>best.score){best.score=score;best.asgn={...asgn};}return;}
+    const e=sorted[i]; const opts=optMap[e]; let placed=false;
+    for(const [c,p] of opts){
+      if(!used.has(c)){placed=true;used.add(c);asgn[e]={c,p,ok:true,pinned:false};bt(i+1,used,asgn,score+p);used.delete(c);delete asgn[e];}
+    }
+    if(!placed){asgn[e]={c:null,p:0,ok:false,pinned:false};bt(i+1,used,asgn,score);delete asgn[e];}
+  }
+  bt(0,new Set(),{},0);
+  // merge pins back in
+  const result = {...(best.asgn||{})};
+  Object.entries(preAsgn).forEach(([def,a])=>{ result[def]=a; });
+  return result;
+}
+
+function runSolve(){
+  const zones=ZONES[curMode];
+  const groundZones = zones.filter(z=>z.db!=="ships");
+  const shipZone    = zones.find(z=>z.db==="ships");
+  const groundDefs  = groundZones.flatMap(z=>slots[curMode][z.key].map(d=>d.trim()).filter(Boolean));
+  const shipDefs    = shipZone ? slots[curMode][shipZone.key].map(d=>d.trim()).filter(Boolean) : [];
+
+  if(!groundDefs.length && !shipDefs.length){
+    document.getElementById("results").innerHTML=`<p style="color:var(--muted);font-size:13px;padding:8px 0">Enter defenders first.</p>`;
+    return;
+  }
+
+  const modePins = pins[curMode]||{};
+
+  // Separate pinned from unpinned for each group
+  function splitPins(defs, isShip){
+    const pinned={}, unpinned=[], preUsed=new Set();
+    defs.forEach(d=>{
+      const p=modePins[d];
+      if(p && (!isShip || p.isShip) && (isShip || !p.isShip)){
+        pinned[d]={c:p.counter, p:p.pct, ok:true, pinned:true};
+        preUsed.add(p.counter);
+      } else if(p && isShip !== p.isShip){
+        // pin doesn't match zone type, treat as unpinned
+        unpinned.push(d);
+      } else if(p){
+        pinned[d]={c:p.counter, p:p.pct, ok:true, pinned:true};
+        preUsed.add(p.counter);
+      } else {
+        unpinned.push(d);
+      }
+    });
+    return {pinned, unpinned, preUsed};
+  }
+
+  const gp = splitPins(groundDefs, false);
+  const sp = splitPins(shipDefs,   true);
+
+  const groundAsgn = groundDefs.length ? solveGroup(gp.unpinned, curMode,   gp.preUsed, gp.pinned) : {};
+  const shipAsgn   = shipDefs.length   ? solveGroup(sp.unpinned, "ships",   sp.preUsed, sp.pinned) : {};
+
+  const allAsgn = {...groundAsgn, ...shipAsgn};
+  const allDefs = [...groundDefs, ...shipDefs];
+  renderResults(allAsgn, allDefs, zones);
+}
+
+// ══════════════════════════════════════════
+// OVERRIDE MODAL  (pin a custom counter)
+// ══════════════════════════════════════════
+let overrideDef = null;
+let overrideIsShip = false;
+
+function openOverride(def, isShip){
+  overrideDef = def;
+  overrideIsShip = isShip;
+  const dbKey = isShip ? "ships" : curMode;
+  const allOpts = (DB[dbKey][def]||[]).map(([c,p])=>({c,p}));
+  // also include custom
+  (customDB[dbKey][def]||[]).forEach(([c,p])=>{
+    if(!allOpts.find(o=>o.c===c)) allOpts.push({c,p});
+  });
+  allOpts.sort((a,b)=>b.p-a.p);
+
+  const optRows = allOpts.map(o=>`
+    <div style="display:grid;grid-template-columns:1fr 54px auto;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px">${o.c}</span>
+      <span class="chip ${o.p>=90?'chip-hi':o.p>=75?'chip-mid':'chip-lo'}">${o.p}%</span>
+      <button class="btn sm" style="white-space:nowrap" onclick="confirmPin('${def.replace(/'/g,"\\'")}','${o.c.replace(/'/g,"\\'")}',${o.p},${isShip});closeModal()">📌 Pin</button>
+    </div>`).join("");
+
+  document.getElementById("modalTitle").textContent = `Override counter for: ${def}`;
+
+  // Build full autocomplete list from all known counters across both DBs
+  const allCounterNames = new Set();
+  Object.values(DB["3v3"]).forEach(arr=>arr.forEach(([c])=>allCounterNames.add(c)));
+  Object.values(DB["5v5"]).forEach(arr=>arr.forEach(([c])=>allCounterNames.add(c)));
+  Object.values(DB["ships"]).forEach(arr=>arr.forEach(([c])=>allCounterNames.add(c)));
+  const datalistHtml = `<datalist id="allCountersList">${[...allCounterNames].sort().map(c=>`<option value="${c}">`).join("")}</datalist>`;
+
+  document.getElementById("modalBody").innerHTML = `
+    ${datalistHtml}
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Choose from the list below, or search and type any counter in the field at the bottom (e.g. a datacron-boosted team). The solver re-runs with this assignment locked in.</p>
+    <div style="max-height:240px;overflow-y:auto">${optRows||'<p style="color:var(--muted);font-size:12px">No data — use the custom entry below</p>'}</div>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Custom counter (type or search any team name):</div>
+      <div style="display:grid;grid-template-columns:1fr 120px auto;gap:8px;align-items:center">
+        <input type="text" id="customPinName" list="allCountersList" placeholder="Start typing a team name…">
+        <div style="display:flex;align-items:center;gap:4px">
+          <input type="range" min="0" max="100" value="80" id="customPinPct" oninput="document.getElementById('customPinLbl').textContent=this.value+'%'" style="flex:1;background:transparent;border:none;padding:0">
+          <span id="customPinLbl" style="font-size:12px;min-width:34px;text-align:right">80%</span>
+        </div>
+        <button class="btn primary sm" onclick="pinCustomEntry()">📌 Pin</button>
+      </div>
+    </div>`;
+  document.getElementById("modal").style.display="flex";
+}
+
+function pinCustomEntry(){
+  const name = document.getElementById("customPinName").value.trim();
+  const pct  = parseInt(document.getElementById("customPinPct").value);
+  if(!name) return;
+  confirmPin(overrideDef, name, pct, overrideIsShip);
+  closeModal();
+}
+
+function confirmPin(def, counter, pct, isShip){
+  if(!pins[curMode]) pins[curMode]={};
+  pins[curMode][def]={counter, pct, isShip};
+  ls.set("gac_pins", JSON.stringify(pins));
+  runSolve();
+}
+
+function closeModal(){
+  document.getElementById("modal").style.display="none";
+}
+
+function renderResults(asgn, defs, zones){
+  const found=defs.map(d=>asgn[d]).filter(a=>a&&a.ok);
+  const avg=found.length?Math.round(found.reduce((s,a)=>s+a.p,0)/found.length):0;
+  const noC=defs.filter(d=>asgn[d]&&!asgn[d].ok).length;
+  const avgCol=avg>=90?"var(--green)":avg>=75?"var(--yellow)":"var(--red)";
+  const hasPins = Object.keys(pins[curMode]||{}).length>0;
+
+  // Detect duplicate counter assignments
+  const counterUseCount={};
+  defs.forEach(d=>{ const a=asgn[d]; if(a&&a.ok) counterUseCount[a.c]=(counterUseCount[a.c]||0)+1; });
+  const dupCounters = new Set(Object.entries(counterUseCount).filter(([,n])=>n>1).map(([c])=>c));
+
+  let html=`<div class="stats-row">
+    <div class="stat"><div class="stat-lbl">Avg win rate</div><div class="stat-val" style="color:${avgCol}">${avg}%</div></div>
+    <div class="stat"><div class="stat-lbl">Countered</div><div class="stat-val" style="color:${found.length===defs.length?"var(--green)":"var(--yellow)"}">${found.length}/${defs.length}</div></div>
+    <div class="stat"><div class="stat-lbl">No counter</div><div class="stat-val" style="color:${noC===0?"var(--green)":"var(--red)"}">${noC}</div></div>
+  </div>`;
+
+  if(dupCounters.size>0){
+    html+=`<div style="background:var(--rbg);border:1px solid rgba(239,68,68,.3);border-radius:var(--r);padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--red)">
+      ⚠ Duplicate counter${dupCounters.size>1?"s":""}: <strong>${[...dupCounters].join(", ")}</strong> — assigned more than once. Use override to fix.
+    </div>`;
+  }
+
+  if(hasPins){
+    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:var(--yellow);flex-wrap:wrap">
+      📌 Some counters are pinned.
+      <button class="btn sm" style="font-size:11px" onclick="keepPinsResolve()">Keep pins, re-solve rest</button>
+      <button class="btn sm" style="font-size:11px" onclick="clearPins();runSolve()">Clear all pins</button>
+    </div>`;
+  }
+
+  zones.forEach(z=>{
+    const zDefs=slots[curMode][z.key].map(d=>d.trim()).filter(Boolean);
+    if(!zDefs.length)return;
+    const blkCls = z.db==="ships" ? "ship" : z.key;
+    const isShip = z.db==="ships";
+    html+=`<div class="result-block ${blkCls}"><div class="zone-lbl ${z.cls}" style="margin-bottom:8px;padding-bottom:6px">${z.label}</div>`;
+    zDefs.forEach(def=>{
+      const a=asgn[def];
+      const ok=a&&a.ok;
+      const pinned=a&&a.pinned;
+      const isDup=ok&&dupCounters.has(a.c);
+      const chipCls=isDup?"chip-lo":!ok?"chip-lo":a.p>=90?"chip-hi":a.p>=75?"chip-mid":"chip-lo";
+      const link = ok ? swgohLink(def, a.c, isShip) : null;
+      const dupBadge = isDup ? `<span style="font-size:10px;background:var(--rbg);color:var(--red);border:1px solid rgba(239,68,68,.4);border-radius:3px;padding:1px 5px;margin-left:4px">duplicate</span>` : "";
+      const ctrHtml = ok
+        ? (link
+            ? `<a href="${link}" target="_blank" rel="noopener" style="color:${isDup?"var(--red)":"var(--text)"};text-decoration:none;font-weight:500" title="View on swgoh.gg">${a.c}${dupBadge} <span style="font-size:10px;color:var(--accent);opacity:.7">↗</span></a>`
+            : `<span style="font-weight:500;color:${isDup?"var(--red)":"var(--text)"}">${a.c}${dupBadge}</span>`)
+        : `<span style="color:var(--red)">⚠ No counter found</span>`;
+      const pinBtn = ok
+        ? (pinned
+            ? `<button class="btn sm" style="font-size:10px;padding:2px 7px;border-color:var(--yellow);color:var(--yellow)" onclick="unpin('${def.replace(/'/g,"\\'")}')">📌 unpin</button>`
+            : `<button class="btn sm" style="font-size:10px;padding:2px 7px" onclick="openOverride('${def.replace(/'/g,"\\'")}',${isShip})">override</button>`)
+        : `<button class="btn sm" style="font-size:10px;padding:2px 7px" onclick="openOverride('${def.replace(/'/g,"\\'")}',${isShip})">set</button>`;
+      html+=`<div class="r-row">
+        <span class="r-def">${def}</span>
+        <span class="r-arr">→</span>
+        <span>${ctrHtml}</span>
+        <span class="chip ${chipCls}">${ok?a.p+"%":"?"}</span>
+        ${pinBtn}
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  document.getElementById("results").innerHTML=html;
+}
+
+// ══════════════════════════════════════════
+// LOOKUP
+// ══════════════════════════════════════════
+function renderTags(){
+  const db=DB[curLMode];
+  const q=document.getElementById("lSearch").value.toLowerCase();
+  const defs=Object.keys(db).sort().filter(d=>!q||d.toLowerCase().includes(q));
+  document.getElementById("tagArea").innerHTML=defs.map(d=>`<button class="tag${selDef===d?" sel":""}" onclick="pickDef('${d.replace(/'/g,"\\'")}')">${d}</button>`).join("");
+}
+
+function pickDef(def){
+  selDef=def;
+  renderTags();
+  const rs = curLMode==="ships" ? shipRoster : groundRoster;
+  const base=(DB[curLMode][def]||[]).map(([c,p,n])=>({c,p,n,custom:false}));
+  const custom=(customDB[curLMode][def]||[]).map(([c,p])=>({c,p,n:"custom",custom:true}));
+  custom.forEach(ce=>{const i=base.findIndex(e=>e.c===ce.c);if(i>=0)base[i]={...ce,n:base[i].n};else base.push(ce);});
+  base.sort((a,b)=>b.p-a.p);
+  const filtered=rs.size>0?base.filter(e=>rs.has(e.c)):base;
+  const showing=filtered.length?filtered:base;
+  const noMatch=rs.size>0&&filtered.length===0?`<div style="font-size:11px;color:var(--yellow);margin-bottom:8px">No roster match — showing all</div>`:"";
+  const rows=showing.map(({c,p,n,custom})=>{
+    const cc=p>=90?"chip-hi":p>=75?"chip-mid":"chip-lo";
+    return`<div class="ct-row"><span style="font-size:13px">${c}${custom?'<span style="font-size:10px;color:var(--accent);margin-left:6px">custom</span>':""}</span><span class="chip ${cc}">${p}%</span><span class="ct-n">n=${n}</span></div>`;
+  }).join("");
+  document.getElementById("lookupResult").innerHTML=`
+    <div style="font-weight:600;margin-bottom:8px">${def}</div>
+    ${noMatch}
+    <div class="ctable">${rows}</div>
+    <div id="customArea" style="margin-top:10px">
+      <button class="btn sm" onclick="openCustom('${def.replace(/'/g,"\\'")}')">+ Add custom entry</button>
+    </div>`;
+}
+
+function openCustom(def){
+  document.getElementById("customArea").innerHTML=`
+    <div class="cform">
+      <div class="cform-row">
+        <input type="text" id="cc_name" placeholder="Counter team name">
+        <div class="pct-range">
+          <input type="range" min="0" max="100" value="80" oninput="document.getElementById('cc_lbl').textContent=this.value+'%'" id="cc_pct">
+          <span class="pct-lbl" id="cc_lbl">80%</span>
+        </div>
+        <button class="btn primary sm" onclick="saveCustom('${def.replace(/'/g,"\\'")}')">Save</button>
+      </div>
+    </div>`;
+}
+
+function saveCustom(def){
+  const name=document.getElementById("cc_name").value.trim();
+  const pct=parseInt(document.getElementById("cc_pct").value);
+  if(!name)return;
+  if(!customDB[curLMode][def])customDB[curLMode][def]=[];
+  customDB[curLMode][def]=customDB[curLMode][def].filter(([c])=>c!==name);
+  customDB[curLMode][def].push([name,pct]);
+  ls.set("gac_custom",JSON.stringify(customDB));
+  toast("Entry saved");
+  pickDef(def);
+}
+
+// ══════════════════════════════════════════
+// MISC
+// ══════════════════════════════════════════
+function refreshInfo(){
+  alert("To update the counter database with the latest season data:\n\n1. Open a new Claude conversation (claude.ai)\n2. Say: 'Please refresh my SWGOH GAC counter database from swgoh-ga3.online-server.info (3v3) and swgoh-ga5.online-server.info (5v5), and give me updated DB objects'\n3. Open this HTML file in a text editor (Notepad / TextEdit / VS Code)\n4. Find the const DB = { ... } section and replace the '3v3' and '5v5' objects with Claude's new ones\n5. Save and refresh the page\n\nShip counters rarely change season to season so those need refreshing less often.");
+}
+
+function toast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2200);
+}
+
+
+// ══════════════════════════════════════════
+// DB MANAGER
+// ══════════════════════════════════════════
+
+// Registry: name -> swgoh.gg code, for fetch URL construction
+// Populated from hardcoded DB + user additions stored in localStorage
+let dbRegistry = {
+  "3v3": {},
+  "5v5": {},
+  "ships": {}
+};
+
+const DB_CODES_3V3 = {
+  "Admiral Raddus":"ADMIRALRADDUS","Admiral Trench":"TRENCH","Ahsoka Tano":"GLAHSOKATANO",
+  "Baylan Skoll":"BAYLANSKOLL","Bo-Katan (Mand\'alor)":"MANDALORBOKATAN","Boba Fett (Scion of Jango)":"BOBAFETTSCION",
+  "Boss Nass":"BOSSNASS","Captain Enoch":"CAPTAINENOCH","Carth Onasi":"CARTHONASI",
+  "CC-2224 \'Cody\'":"CC2224","Cere Junda":"CEREJUNDA","Chief Chirpa":"CHIEFCHIRPA",
+  "Chief Nebit":"CHIEFNEBIT","Commander Luke Skywalker":"COMMANDERLUKESKYWALKER","CT-7567 \'Rex\'":"CT7567",
+  "Dark Trooper Moff Gideon":"MOFFGIDEONS3","Darth Malgus":"DARTHMALGUS",
+  "Darth Maul":"MAUL","Darth Nihilus":"DARTHNIHILUS","Darth Revan":"DARTHREVAN","Darth Traya":"DARTHTRAYA",
+  "Doctor Aphra":"DOCTORAPHRA","Emperor Palpatine":"EMPERORPALPATINE","Finn":"FINN",
+  "General Grievous":"GRIEVOUS","General Skywalker":"GENERALSKYWALKER","General Veers":"VEERS",
+  "Geonosian Brood Alpha":"GEONOSIANBROODALPHA","Grand Moff Tarkin":"GRANDMOFFTARKIN",
+  "Hera Syndulla":"HERASYNDULLAS3","Hunter":"BADBATCHHUNTER","Iden Versio":"IDENVERSIOEMPIRE","IG-88":"IG88",
+  "Inquisitor Barriss":"INQUISITORBARRISS","Jabba the Hutt":"JABBATHEHUTT","Jango Fett":"JANGOFETT",
+  "Jedi Knight Revan":"JEDIKNIGHTREVAN","Jedi Master Kenobi":"JEDIMASTERKENOBI",
+  "Jedi Master Luke Skywalker":"GRANDMASTERLUKE","Jedi Master Mace Windu":"JEDIMASTERMACEWINDU",
+  "Kelleran Beq":"KELLERANBEQ","Kylo Ren (Unmasked)":"KYLORENUNMASKED","Leia Organa":"GLLEIA",
+  "Lord Vader":"LORDVADER","Major Partagaz":"MAJORPARTAGAZ","Maz Kanata":"MAZKANATA",
+  "Mon Mothma":"MONMOTHMA","Mother Talzin":"MOTHERTALZIN","Omega (Fugitive)":"OMEGAS3",
+  "Padmé Amidala":"PADMEAMIDALA","Pirate King Hondo Ohnaka":"GLHONDO","Queen Amidala":"QUEENAMIDALA",
+  "Qui-Gon Jinn":"QUIGONJINN","Rey":"GLREY","Satele Shan":"SATELESHAN","Saw Gerrera":"SAWGERRERA",
+  "Sith Eternal Emperor":"SITHPALPATINE","Stormtrooper Luke":"STORMTROOPERLUKE",
+  "Supreme Leader Kylo Ren":"SUPREMELEADERKYLOREN","Tarfful":"TARFFUL",
+  "The Great Mother":"GREATMOTHERS","The Stranger":"STRANGER","Third Sister":"THIRDSISTER",
+  "Tusken Chieftain":"TUSKENCHIEFTAIN","Zuckuss":"ZUCKUSS",
+  "Captain Ithano":"ITHANO","Cassian Andor (Undercover)":"CASSIANUNDERCOVER"
+};
+
+const DB_CODES_SHIPS = {
+  "Chimaera":"CAPITALCHIMAERA","Home One":"CAPITALMONCALAMARICRUISER",
+  "Negotiator":"CAPITALNEGOTIATOR","Executor":"CAPITALEXECUTOR",
+  "Profundity":"CAPITALPROFUNDITY","Malevolence":"CAPITALMALEVOLENCE","Leviathan":"CAPITALLEVIATHAN"
+};
+
+function dbInit(){
+  dbRegistry["3v3"] = Object.assign({}, DB_CODES_3V3);
+  dbRegistry["5v5"] = Object.assign({}, DB_CODES_3V3); // same defenders as 3v3
+  dbRegistry["ships"] = Object.assign({}, DB_CODES_SHIPS);
+  const saved = ls.get("gac_db_registry");
+  if(saved){ const s=JSON.parse(saved); Object.assign(dbRegistry["3v3"],s["3v3"]||{}); Object.assign(dbRegistry["5v5"],s["5v5"]||{}); Object.assign(dbRegistry["ships"],s["ships"]||{}); }
+}
+
+function dbSaveSeasons(){
+  const s = {
+    "3v3": document.getElementById("season-3v3").value,
+    "5v5": document.getElementById("season-5v5").value,
+    "ships": document.getElementById("season-ships").value,
+  };
+  ls.set("gac_db_seasons", JSON.stringify(s));
+}
+
+function dbLoadSeasons(){
+  const saved = ls.get("gac_db_seasons");
+  if(!saved) return;
+  const s = JSON.parse(saved);
+  if(s["3v3"])   document.getElementById("season-3v3").value   = s["3v3"];
+  if(s["5v5"])   document.getElementById("season-5v5").value   = s["5v5"];
+  if(s["ships"]) document.getElementById("season-ships").value = s["ships"];
+}
+
+function dbSaveRegistry(){
+  const extra = {"3v3":{},"5v5":{},"ships":{}};
+  for(const [n,c] of Object.entries(dbRegistry["3v3"])){ if(!DB_CODES_3V3[n]) extra["3v3"][n]=c; }
+  for(const [n,c] of Object.entries(dbRegistry["5v5"])){ if(!DB_CODES_3V3[n]) extra["5v5"][n]=c; }
+  for(const [n,c] of Object.entries(dbRegistry["ships"])){ if(!DB_CODES_SHIPS[n]) extra["ships"][n]=c; }
+  ls.set("gac_db_registry", JSON.stringify(extra));
+}
+
+function dbRenderTable(mode){
+  const tbody = document.getElementById("dbTable-"+mode);
+  if(!tbody) return;
+  const reg = dbRegistry[mode];
+  const rows = Object.entries(reg).sort((a,b)=>a[0].localeCompare(b[0])).map(([name,code])=>{
+    const hasData = (DB[mode][name]||[]).length > 0;
+    const isBuiltIn = mode==="ships" ? !!DB_CODES_SHIPS[name] : !!DB_CODES_3V3[name];
+    const statusCls = hasData ? "db-status-ok" : "db-status-empty";
+    const statusTxt = hasData ? "✓ "+DB[mode][name].length+" counters" : "✗ No data";
+    const delBtn = isBuiltIn ? "" : `<button class="btn sm" style="font-size:10px;padding:2px 6px;color:var(--red);border-color:var(--red)" onclick="dbRemoveEntry('${mode}','${name.replace(/'/g,"\'")}')">✕</button>`;
+    const fetchBtn = `<button class="btn sm" style="font-size:10px;padding:2px 6px" onclick="dbFetchOne('${mode}','${name.replace(/'/g,"\'")}','${code}')">↻</button>`;
+    return `<tr>
+      <td>${name}</td>
+      <td class="db-code">${code}</td>
+      <td><span class="${statusCls}">${statusTxt}</span></td>
+      <td style="display:flex;gap:4px">${fetchBtn}${delBtn}</td>
+    </tr>`;
+  }).join("");
+  tbody.innerHTML = rows || '<tr><td colspan="4" style="color:var(--muted);font-size:11px">No entries</td></tr>';
+}
+
+function dbAddEntry(mode){
+  const nameEl = document.getElementById("dbAdd-name-"+mode);
+  const codeEl = document.getElementById("dbAdd-code-"+mode);
+  const name = nameEl.value.trim();
+  const code = codeEl.value.trim().toUpperCase();
+  if(!name || !code){ toast("Enter both name and code"); return; }
+  if(dbRegistry[mode][name]){ toast("Entry already exists"); return; }
+  dbRegistry[mode][name] = code;
+  dbSaveRegistry();
+  nameEl.value=""; codeEl.value="";
+  dbRenderTable(mode);
+  toast("Added: "+name);
+}
+
+function dbRemoveEntry(mode, name){
+  if(!confirm("Remove "+name+" from the registry?")) return;
+  delete dbRegistry[mode][name];
+  delete DB[mode][name];
+  dbSaveRegistry();
+  dbRenderTable(mode);
+  toast("Removed: "+name);
+}
+
+function dbLog(msg){
+  const el = document.getElementById("fetchLog");
+  el.textContent += "\n" + msg;
+  el.scrollTop = el.scrollHeight;
+}
+
+function dbSetProgress(done, total){
+  document.getElementById("dbProgress").style.width = (total>0 ? Math.round(done/total*100) : 0)+"%";
+}
+
+function extractCounters(doc, mode){
+  const links = doc.querySelectorAll('a[href*="a_lead="]');
+  const unique = {};
+  links.forEach(el=>{
+    const href = el.getAttribute("href");
+    const match = href.match(/a_lead=([A-Z0-9_]+)/);
+    if(!match) return;
+    const c = match[1];
+    const text = el.parentElement.parentElement.parentElement.innerText;
+    const seen = text.match(/Seen\s*([\d,]+)/);
+    const win  = text.match(/Win %\s*(\d+)/);
+    if(!seen) return;
+    const seenNum = parseInt(seen[1].replace(",",""));
+    if(!unique[c]||seenNum>unique[c].seen) unique[c]={seen:seenNum,win:win?parseInt(win[1]):0};
+  });
+  // Map codes to display names using existing DB entries or raw code
+  const allNames = Object.assign({}, DB_CODES_3V3, DB_CODES_SHIPS);
+  const reverseMap = {};
+  for(const [n,c] of Object.entries(allNames)) reverseMap[c]=n;
+  return Object.entries(unique)
+    .sort((a,b)=>b[1].seen-a[1].seen)
+    .slice(0,10)
+    .map(([code,d])=>[reverseMap[code]||code, d.win, d.seen]);
+}
+
+function dbGenerateScript(mode){
+  const reg = dbRegistry[mode];
+  const seasonKey = mode==="ships" ? "season-ships" : "season-3v3";
+  const season = document.getElementById(seasonKey).value;
+  const baseUrl = mode==="ships"
+    ? "https://swgoh.gg/gac/ship-counters/"
+    : "https://swgoh.gg/gac/counters/";
+
+  const entries = Object.entries(reg).map(([name,code])=>`['${code}','${name.replace(/'/g,"\\'")}']`).join(',\n    ');
+  const seasonSuffix = season
+    ? `"/?season_id=CHAMPIONSHIPS_GRAND_ARENA_GA2_EVENT_SEASON_"+season+"&sort=count"`
+    : `"/?sort=count"`;
+
+  const script = `(function(){
+  const characters = [
+    ${entries}
+  ];
+  const baseUrl = '${baseUrl}';
+  const season = ${season || 'null'};
+  const results = {};
+  let index = 0;
+  function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+  function extractFromDoc(doc){
+    const links = doc.querySelectorAll('a[href*="a_lead="]');
+    const unique = {};
+    links.forEach(el=>{
+      const href = el.getAttribute('href');
+      const match = href.match(/a_lead=([A-Z0-9_]+)/);
+      if(!match) return;
+      const c = match[1];
+      const text = el.parentElement.parentElement.parentElement.innerText;
+      const seen = text.match(/Seen\\s*([\\d,]+)/);
+      const win  = text.match(/Win %\\s*(\\d+)/);
+      if(!seen) return;
+      const seenNum = parseInt(seen[1].replace(',',''));
+      if(!unique[c]||seenNum>unique[c].seen) unique[c]={seen:seenNum,win:win?win[1]+'%':'?'};
+    });
+    return Object.entries(unique)
+      .sort((a,b)=>b[1].seen-a[1].seen)
+      .slice(0,10)
+      .map(([c,d])=>c+'|'+d.seen+'|'+d.win);
+  }
+  async function run(){
+    console.log('Starting ${mode} fetch for '+characters.length+' entries...');
+    for(let i=0;i<characters.length;i++){
+      const [code,name] = characters[i];
+      console.log('Fetching '+(i+1)+'/'+characters.length+': '+name+' ('+code+')');
+      try{
+        const url = baseUrl+code+(season ? '/?season_id=CHAMPIONSHIPS_GRAND_ARENA_GA2_EVENT_SEASON_'+season+'&sort=count' : '/?sort=count');
+        const resp = await fetch(url,{credentials:'include'});
+        const html = await resp.text();
+        const doc = new DOMParser().parseFromString(html,'text/html');
+        results[code] = {name:name, counters:extractFromDoc(doc)};
+      } catch(e){
+        console.warn('Failed: '+code, e.message);
+        results[code] = {name:name, counters:[]};
+      }
+      if(i<characters.length-1) await delay(1500);
+    }
+    let output = '';
+    for(const [code,data] of Object.entries(results)){
+      output += data.name+'\\n';
+      data.counters.forEach(c=>output+=c+'\\n');
+      output+='\\n';
+    }
+    const blob = new Blob([output],{type:'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'swgoh_${mode}_s'+( season||'X' )+'_counters.txt';
+    a.click();
+    console.log('Done! File downloaded.');
+  }
+  run();
+})();`;
+
+  navigator.clipboard.writeText(script).then(()=>{
+    toast('Script copied to clipboard — paste into swgoh.gg console');
+  }).catch(()=>{
+    // Fallback: show in log
+    document.getElementById('fetchLog').textContent = script;
+    toast('Clipboard blocked — script shown in log below, copy manually');
+  });
+}
+
+function dbImportFile(){
+  document.getElementById('dbImportInput').click();
+}
+
+function dbHandleImport(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const raw = e.target.result;
+    const fname = file.name.toLowerCase();
+    // Detect mode from filename: swgoh_5v5_* or swgoh_3v3_* or swgoh_ships_*
+    let importMode = null;
+    if(fname.includes('5v5')) importMode = '5v5';
+    else if(fname.includes('3v3')) importMode = '3v3';
+    else if(fname.includes('ship')) importMode = 'ships';
+
+    const blocks = raw.trim().split('\n\n');
+    let updated = 0, skipped = 0;
+
+    const codeToDisplay = {};
+    for(const [n,c] of Object.entries(dbRegistry['3v3']))   codeToDisplay[c] = n;
+    for(const [n,c] of Object.entries(dbRegistry['ships'])) codeToDisplay[c] = n;
+
+    for(const block of blocks){
+      const lines = block.trim().split('\n');
+      if(!lines.length) continue;
+      const defenderName = lines[0].trim();
+      const counters = [];
+      for(const line of lines.slice(1)){
+        const parts = line.trim().split('|');
+        if(parts.length < 2) continue;
+        const counterCode = parts[0];
+        const seen = parseInt(parts[1].replace(',',''));
+        const win  = parseInt((parts[2]||'0').replace('%',''));
+        const counterName = codeToDisplay[counterCode] || counterCode;
+        counters.push([counterName, win, seen]);
+      }
+      if(!counters.length){ skipped++; continue; }
+
+      // Determine mode: use filename hint, else check registry
+      let mode = importMode;
+      if(!mode){
+        if(dbRegistry['ships'][defenderName]) mode = 'ships';
+        else if(dbRegistry['3v3'][defenderName] || dbRegistry['5v5'][defenderName]) mode = '3v3'; // default ground to 3v3
+      }
+      if(!mode){ dbLog('⚠ Unknown defender: '+defenderName+' — skipped'); skipped++; continue; }
+      if(!dbRegistry[mode][defenderName]){ dbLog('⚠ Not in '+mode+' registry: '+defenderName+' — skipped'); skipped++; continue; }
+      DB[mode][defenderName] = counters;
+      updated++;
+    }
+
+    ls.set('gac_db_live', JSON.stringify({time:Date.now()}));
+    dbRenderTable('3v3');
+    dbRenderTable('ships');
+    updateMeta();
+    dbLog('Import complete: '+updated+' updated, '+skipped+' skipped');
+    toast('Imported: '+updated+' defenders updated');
+  };
+  reader.readAsText(file);
+  // Reset input so same file can be re-imported
+  event.target.value = '';
+}
+
+function dbBuildUrl(mode, code){
+  const baseUrl = mode==="ships"
+    ? "https://swgoh.gg/gac/ship-counters/"
+    : "https://swgoh.gg/gac/counters/";
+  const seasonKey = mode==="5v5" ? "season-5v5" : mode==="ships" ? "season-ships" : "season-3v3";
+  const seasonEl = document.getElementById(seasonKey);
+  const season = seasonEl && seasonEl.value ? parseInt(seasonEl.value) : null;
+  if(season){
+    return baseUrl+code+"/?season_id=CHAMPIONSHIPS_GRAND_ARENA_GA2_EVENT_SEASON_"+season+"&sort=count";
+  }
+  return baseUrl+code+"/?sort=count";
+}
+
+async function dbFetchOne(mode, name, code){
+  const url = dbBuildUrl(mode, code);
+  dbLog("Fetching: "+name+" ("+code+")...");
+  try{
+    const resp = await fetch(url,{credentials:"include"});
+    const html = await resp.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html,"text/html");
+    const counters = extractCounters(doc, mode);
+    if(counters.length===0){
+      dbLog("  ⚠ No counters found for "+name);
+    } else {
+      DB[mode][name] = counters;
+      ls.set("gac_db_live", JSON.stringify({time:Date.now()}));
+      dbLog("  ✓ "+counters.length+" counters saved for "+name);
+    }
+  } catch(e){
+    dbLog("  ✗ Failed: "+e.message);
+  }
+  dbRenderTable(mode);
+  updateMeta();
+}
+
+async function dbFetchMissing(mode){
+  const missing = Object.entries(dbRegistry[mode]).filter(([name])=>!(DB[mode][name]||[]).length);
+  if(!missing.length){ toast("No missing entries"); return; }
+  document.getElementById("fetchLog").textContent="Fetching "+missing.length+" missing entries...";
+  dbSetProgress(0, missing.length);
+  for(let i=0;i<missing.length;i++){
+    const [name,code] = missing[i];
+    await dbFetchOne(mode, name, code);
+    dbSetProgress(i+1, missing.length);
+    if(i<missing.length-1) await new Promise(r=>setTimeout(r,1500));
+  }
+  dbSetProgress(missing.length, missing.length);
+  toast("Done fetching "+missing.length+" entries");
+}
+
+async function dbFetchAll(mode){
+  const all = Object.entries(dbRegistry[mode]);
+  if(!all.length){ toast("No entries"); return; }
+  if(!confirm("Refresh all "+all.length+" entries from swgoh.gg? This will take ~"+(Math.ceil(all.length*1.5/60))+" minute(s).")) return;
+  document.getElementById("fetchLog").textContent="Refreshing all "+all.length+" entries...";
+  dbSetProgress(0, all.length);
+  for(let i=0;i<all.length;i++){
+    const [name,code] = all[i];
+    await dbFetchOne(mode, name, code);
+    dbSetProgress(i+1, all.length);
+    if(i<all.length-1) await new Promise(r=>setTimeout(r,1500));
+  }
+  dbSetProgress(all.length, all.length);
+  toast("Refresh complete");
+}
+
+function dbSaveToFile(){
+  let out = "// SWGOH GAC Counter DB — exported "+new Date().toISOString().slice(0,10)+"\n";
+  out += "const DB = {\n";
+  for(const mode of ["3v3","5v5","ships"]){
+    out += "\""+mode+"\": {\n";
+    for(const [def,counters] of Object.entries(DB[mode])){
+      const dn = def.replace(/'/g,"\\'");
+      const entries = counters.map(([c,p,n])=>`["${c.replace(/'/g,"\\'")}",${p},${n}]`).join(",");
+      out += `  "${dn}":         [${entries}],\n`;
+    }
+    out += "},\n";
+  }
+  out += "};\n";
+  const blob = new Blob([out],{type:"text/javascript"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "swgoh_db_"+new Date().toISOString().slice(0,10)+".js";
+  a.click();
+  toast("DB exported");
+}
+
+
+// ══════════════════════════════════════════
+// SCOUT TAB
+// ══════════════════════════════════════════
+// SCOUT — zone detection via SVG path index
+// SVG gac-zone-layout paths (confirmed by DOM inspection):
+//   path[0] = North   path[1] = South   path[2] = Ships   path[3] = Back
+// The active zone has class "gac-zone-layout--is-active" on its path element.
+// ══════════════════════════════════════════
+
+const SCOUT_ZONE_MAP = ["north", "south", "ship", "back"];
+
+// Persisted scout state
+let scoutData = {}; // { allyCode, eventId, rounds: { "1": [...battles], "2": [...], "3": [...] } }
+let scoutActiveRound = "all";
+
+// Reverse-lookup: swgoh.gg character code → display name
+function scoutCodeToName(code) {
+  const extra = {
+    "CAPITALMONCALAMARICRUISER":"Home One","CAPITALSTARDESTROYER":"Executrix",
+    "CAPITALRADDUS":"Raddus","GLAHSOKATANO":"Ahsoka Tano","GREATMOTHERS":"Great Mothers",
+    "GENERALSYNDULLA":"General Syndulla","GRANDINQUISITOR":"Grand Inquisitor",
+    "CAPTAINSILVO":"Captain Silvo","DASHRENDAR":"Dash Rendar",
+    "CASSIANUNDERCOVER":"Cassian Andor (Undercover)","MONMOTHMA":"Mon Mothma",
+    "MAJORPARTAGAZ":"Major Partagaz","TRENCH":"Admiral Trench",
+  };
+  const allCodes = Object.assign({}, DB_CODES_3V3, DB_CODES_SHIPS, extra);
+  for (const [name, c] of Object.entries(allCodes)) { if (c === code) return name; }
+  return code;
+}
+
+// Parse the OPPONENT'S defense section from a GAC history page
+// Returns array of { defCode, attackerCode, zone, isShip, banners, outcome, attempts }
+function scoutParseDefenses(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const battles = [];
+
+  // The page has exactly two sections separated by an h2-style header text:
+  // Section A: "[Player]'s attacks / [Opp]'s defenses"  → opponent defends
+  // Section B: "[Opp]'s attacks / [Player]'s defenses"  → PLAYER defends (what we want)
+  //
+  // We identify section B by finding all battle containers and picking those
+  // that come AFTER the midpoint separator. Each battle container holds:
+  //   - One SVG with gac-zone-layout (zone indicator)
+  //   - One Insight link with a_lead= (attacker)
+  //   - One Counters/Insight link with d_lead= (defender, only in section B)
+  //   - Banners / Outcome / Attempt text
+
+  // Find all battle wrapper elements — they contain both an SVG zone map and battle info
+  // The SVG class is "gac-zone-layout__svg"
+  const zoneSVGs = doc.querySelectorAll("svg.gac-zone-layout__svg");
+
+  zoneSVGs.forEach(svg => {
+    // Determine zone from active path
+    const paths = svg.querySelectorAll("path");
+    let zone = "unknown";
+    paths.forEach((path, idx) => {
+      if (path.classList.contains("gac-zone-layout--is-active")) {
+        zone = SCOUT_ZONE_MAP[idx] || "unknown";
+      }
+    });
+    const isShip = (zone === "ship");
+
+    // Walk up to the battle container
+    let container = svg.parentElement;
+    for (let i = 0; i < 6 && container; i++) container = container.parentElement;
+    if (!container) return;
+
+    // Get defender code (d_lead= link — only present for the defense side)
+    const defLinks = container.querySelectorAll('a[href*="d_lead="]');
+    if (!defLinks.length) return; // attacker side only has a_lead, skip
+    const defMatch = defLinks[0].getAttribute("href").match(/d_lead=([A-Z0-9_]+)/);
+    if (!defMatch) return;
+    const defCode = defMatch[1];
+
+    // Get attacker code (a_lead= link)
+    const atkLinks = container.querySelectorAll('a[href*="a_lead="]');
+    let attackerCode = null;
+    if (atkLinks.length) {
+      const m = atkLinks[0].getAttribute("href").match(/a_lead=([A-Z0-9_]+)/);
+      if (m) attackerCode = m[1];
+    }
+
+    // Get banners, outcome, attempts from text content
+    const txt = container.innerText || "";
+    const bm = txt.match(/Banners\s*(\d+)/);
+    const om = txt.match(/Outcome\s*(Win|Loss|Draw|Retreat)/);
+    const am = txt.match(/Attempt\s*(\d+)/);
+
+    battles.push({
+      defCode,
+      attackerCode,
+      zone,
+      isShip,
+      banners:  bm ? parseInt(bm[1]) : 0,
+      outcome:  om ? om[1] : "?",
+      attempts: am ? parseInt(am[1]) : 1,
+    });
+  });
+
+  // The page has two sections: we only want section B (opponent attacks player's defense)
+  // Section B starts after the midpoint. Since both sections have the same number of battles,
+  // we split at the halfway point.
+  const half = Math.floor(battles.length / 2);
+  return battles.slice(half);
+}
+
+function scoutGenerateScript() {
+  const code = document.getElementById("scoutAllyCode").value.trim().replace(/\D/g,"");
+  const evId = document.getElementById("scoutEventId").value.trim();
+  if (!code) { toast("Enter an ally code first"); return; }
+  if (!evId)  { toast("Enter a season event ID first"); return; }
+
+  const script = `(function(){
+  const allyCode = '${code}';
+  const eventId  = '${evId}';
+  const rounds   = ['1','2','3'];
+  const ZONE_MAP = ['north','south','ship','back'];
+
+  function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  function getZoneFromSVG(svg) {
+    const paths = svg.querySelectorAll('path');
+    for(let i=0;i<paths.length;i++){
+      const cls = paths[i].getAttribute('class')||'';
+      if(cls.includes('is-active')) return ZONE_MAP[i]||'unknown';
+    }
+    return 'unknown';
+  }
+
+  function parseDefenses(doc) {
+    // Each battle block contains: SVG zone map + attacker squad (a_lead) + defender squad (d_lead)
+    // The defender squad has a "Counters" link with d_lead= — attacker side only has a_lead.
+    // Strategy: find all Counters links (d_lead only), then for each one walk UP to find
+    // the enclosing battle block, then find its SVG and attacker link.
+    //
+    // The page has TWO sections (SinTez attacks / Opp attacks).
+    // We want section 2: opponent attacks SinTez defenses = SinTez's defense squads.
+    // Section 2 starts after the midpoint of all d_lead links on the page.
+
+    const allDefLinks = Array.from(doc.querySelectorAll('a[href*="d_lead="]'));
+    const half = Math.floor(allDefLinks.length / 2);
+    const defSection = allDefLinks.slice(half); // section 2 = SinTez defends
+
+    const battles = [];
+
+    defSection.forEach(defLink => {
+      const defMatch = defLink.href.match(/d_lead=([A-Z0-9_]+)/);
+      if(!defMatch) return;
+      const defCode = defMatch[1];
+      const isShip = defLink.href.includes('combat_type=2') ||
+                     defLink.href.includes('ship-counters');
+
+      // Find the SVG zone map: walk UP from defLink to find a parent that contains an SVG
+      let el = defLink;
+      let svg = null;
+      let attackerCode = null;
+      let banners = 0, outcome = '?', attempts = 1;
+
+      // Walk up max 15 levels looking for a container with both SVG and a_lead
+      for(let i=0;i<15;i++){
+        el = el.parentElement;
+        if(!el) break;
+        if(!svg) {
+          const s = el.querySelector('svg.gac-zone-layout__svg');
+          if(s) svg = s;
+        }
+        if(!attackerCode) {
+          const aLink = el.querySelector('a[href*="a_lead="]');
+          if(aLink){
+            const m = aLink.href.match(/a_lead=([A-Z0-9_]+)/);
+            if(m) attackerCode = m[1];
+          }
+        }
+        // Once we have both, grab stats and stop
+        if(svg && attackerCode) {
+          const txt = el.innerText||'';
+          const bm = txt.match(/Banners\\s*(\\d+)/);
+          const om = txt.match(/Outcome\\s*(Win|Loss|Draw|Retreat)/);
+          const am = txt.match(/Attempt\\s*(\\d+)/);
+          if(bm) banners = parseInt(bm[1]);
+          if(om) outcome = om[1];
+          if(am) attempts = parseInt(am[1]);
+          break;
+        }
+      }
+
+      const zone = svg ? getZoneFromSVG(svg) : 'unknown';
+
+      battles.push({ defCode, attackerCode, zone, isShip: zone==='ship',
+        banners, outcome, attempts });
+    });
+
+    return battles;
+  }
+
+  async function run(){
+    console.log('Starting scout for '+allyCode+'...');
+    const results = {};
+    for(let i=0;i<rounds.length;i++){
+      const r = rounds[i];
+      console.log('Fetching round '+r+'...');
+      try{
+        const url = 'https://swgoh.gg/p/'+allyCode+'/gac-history/'+eventId+'/'+r+'/';
+        const resp = await fetch(url,{credentials:'include'});
+        const html = await resp.text();
+        const doc  = new DOMParser().parseFromString(html,'text/html');
+        results[r] = parseDefenses(doc);
+        console.log('Round '+r+': '+results[r].length+' defense battles. Defenders: '+[...new Set(results[r].map(b=>b.defCode))].join(', '));
+      } catch(e){
+        console.warn('Round '+r+' failed:',e.message);
+        results[r] = [];
+      }
+      if(i < rounds.length-1) await delay(700);
+    }
+    const out = JSON.stringify({ allyCode, eventId, rounds: results }, null, 2);
+    const blob = new Blob([out],{type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'scout_'+allyCode+'_'+eventId+'.json';
+    a.click();
+    console.log('Done! Import the downloaded JSON into the GAC Planner Scout tab.');
+  }
+  run();
+})();`;
+
+  navigator.clipboard.writeText(script).then(() => {
+    toast("Script copied — paste into swgoh.gg console");
+  }).catch(() => {
+    const ta = document.createElement("textarea");
+    ta.value = script;
+    ta.style.cssText = "width:100%;height:160px;font-size:11px;font-family:monospace;background:var(--s2);color:var(--muted);border:1px solid var(--border);border-radius:var(--r);padding:8px;resize:vertical";
+    ta.readOnly = true;
+    const wrap = document.createElement("div");
+    wrap.className = "db-section";
+    wrap.innerHTML = '<div class="db-section-title">Script — copy manually then paste into swgoh.gg console</div>';
+    wrap.appendChild(ta);
+    const res = document.getElementById("scoutResults");
+    res.innerHTML = "";
+    res.appendChild(wrap);
+    toast("Clipboard blocked — copy from the box below");
+  });
+}
+
+
+function scoutHandleImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.rounds) { toast("Invalid scout file"); return; }
+      scoutData = data;
+      // Restore ally code + event ID fields
+      if (data.allyCode) document.getElementById("scoutAllyCode").value = data.allyCode;
+      if (data.eventId)  document.getElementById("scoutEventId").value  = data.eventId;
+      ls.set("gac_scout_state", JSON.stringify({ allyCode: data.allyCode, eventId: data.eventId }));
+      scoutActiveRound = "all";
+      scoutRender();
+      toast("Scout data imported!");
+    } catch(err) {
+      toast("Failed to parse JSON: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = "";
+}
+
+function scoutRender() {
+  const roundTabs = document.getElementById("scoutRoundTabs");
+  const summary   = document.getElementById("scoutSummary");
+  const results   = document.getElementById("scoutResults");
+
+  const availRounds = Object.keys(scoutData.rounds).filter(r => scoutData.rounds[r].length > 0);
+  if (availRounds.length === 0) {
+    results.innerHTML = `<div class="scout-error">⚠ No defense data found. The profile may be private, or the fetch was blocked by CORS (must be run on swgoh.gg). <br><br>
+      <strong>Workaround:</strong> Open swgoh.gg in your browser, open DevTools Console, and paste this fetch command to get the data, then import it here (coming soon).</div>`;
+    roundTabs.style.display = "none";
+    summary.style.display = "none";
+    return;
+  }
+
+  roundTabs.style.display = "flex";
+  const tabBtns = ["all", ...availRounds];
+  roundTabs.innerHTML = tabBtns.map(r => `
+    <button class="scout-round-btn${r===scoutActiveRound?" active":""}" onclick="scoutSetRound('${r}')">
+      ${r==="all"?"All Rounds":"Round "+r}
+    </button>`).join("");
+
+  // Build zoned data — zone comes directly from SVG parsing, no inference needed
+  const byZone = { north:[], south:[], back:[], ship:[] };
+
+  function dedupeByZone(battles) {
+    // Within a zone, deduplicate multiple attempts on the same slot
+    // Same defCode + same zone = same slot, multiple attempts
+    const seen = {};
+    const deduped = [];
+    battles.forEach(b => {
+      const key = b.defCode + "|" + b.zone;
+      if (!seen[key]) {
+        seen[key] = b;
+        deduped.push({...b});
+      } else {
+        seen[key].attempts = Math.max(seen[key].attempts||1, b.attempts||1);
+        if (b.outcome === "Win") seen[key].outcome = "Win";
+      }
+    });
+    return deduped;
+  }
+
+  availRounds.forEach(r => {
+    const allBattles = scoutData.rounds[r] || [];
+    const deduped = dedupeByZone(allBattles);
+    deduped.forEach(b => {
+      const zone = b.zone || (b.isShip ? "ship" : "unknown");
+      if (byZone[zone]) byZone[zone].push({...b, round:r});
+    });
+  });
+
+  // Filter by active round if needed
+  if (scoutActiveRound !== "all") {
+    Object.keys(byZone).forEach(z => {
+      byZone[z] = byZone[z].filter(b => b.round === scoutActiveRound);
+    });
+  }
+
+  const groundAll = [...byZone.north, ...byZone.south, ...byZone.back];
+  const uniqueGround = new Set(groundAll.map(b=>b.defCode)).size;
+  const freqMap = {};
+  groundAll.forEach(b => { freqMap[b.defCode] = (freqMap[b.defCode]||0)+1; });
+  const repeated = Object.values(freqMap).filter(c=>c>=2).length;
+
+  summary.style.display = "grid";
+  summary.innerHTML = `
+    <div class="stat"><div class="stat-lbl">Rounds loaded</div><div class="stat-val">${availRounds.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Ground defs seen</div><div class="stat-val">${groundAll.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Unique squads</div><div class="stat-val">${uniqueGround}</div></div>
+    <div class="stat"><div class="stat-lbl">Used 2+ rounds</div><div class="stat-val" style="color:var(--accent)">${repeated}</div></div>`;
+
+  const zones = [
+    { key:"north", label:"North Zone", cls:"scout-zone-north" },
+    { key:"south", label:"South Zone", cls:"scout-zone-south" },
+    { key:"back",  label:"Back Zone",  cls:"scout-zone-back"  },
+  ];
+
+  let html = "";
+
+  zones.forEach(z => {
+    if (!byZone[z.key].length) return;
+    html += `<div class="scout-zone-block ${z.cls}">
+      <div class="scout-zone-title">⚔ ${z.label}</div>`;
+
+    if (scoutActiveRound === "all") {
+      const defMap = {};
+      byZone[z.key].forEach(b => {
+        if (!defMap[b.defCode]) defMap[b.defCode] = [];
+        defMap[b.defCode].push(b);
+      });
+      Object.entries(defMap).sort((a,b)=>b[1].length-a[1].length).forEach(([code, bList]) => {
+        const name = scoutCodeToName(code);
+        const wins = bList.filter(b=>b.outcome==="Win").length;
+        const held = bList.filter(b=>b.outcome==="Loss"||b.outcome==="Draw").length;
+        const maxAtt = Math.max(...bList.map(b=>b.attempts||1));
+        const freq = bList.length;
+        const countersUsed = [...new Set(bList.filter(b=>b.attackerCode).map(b=>scoutCodeToName(b.attackerCode)))];
+        const outcomeColor = held > 0 ? "var(--red)" : wins === freq ? "var(--green)" : "var(--yellow)";
+        html += `<div class="scout-def-row">
+          <div>
+            <span class="scout-def-name">${name}</span>
+            ${freq>=2?`<span class="scout-freq-badge">×${freq}</span>`:""}
+          </div>
+          <div class="scout-counters">
+            ${countersUsed.map(c=>{
+              const dbMatch = (DB["3v3"][name]||[]).find(([cn])=>cn===c);
+              const cls = dbMatch ? (dbMatch[1]>=90?"seen-hi":dbMatch[1]>=75?"seen-med":"") : "";
+              return `<span class="scout-ctr-pill ${cls}" title="${dbMatch?dbMatch[1]+'% win rate':'Used as counter'}">${c}</span>`;
+            }).join("")||`<span style="color:var(--muted);font-size:11px">No counter data</span>`}
+          </div>
+          <div class="scout-attempts${maxAtt>=3?" many":""}">
+            <span style="color:${outcomeColor}">${wins}W/${held}H</span>
+            ${maxAtt>1?`<br><span style="color:var(--red)">max ${maxAtt} att</span>`:""}
+          </div>
+        </div>`;
+      });
+    } else {
+      byZone[z.key].forEach(b => {
+        const name = scoutCodeToName(b.defCode);
+        const ctrName = b.attackerCode ? scoutCodeToName(b.attackerCode) : null;
+        const dbMatch = ctrName ? (DB["3v3"][name]||[]).find(([cn])=>cn===ctrName) : null;
+        const pillCls = dbMatch ? (dbMatch[1]>=90?"seen-hi":dbMatch[1]>=75?"seen-med":"") : "";
+        const outcomeColor = b.outcome==="Win"?"var(--green)":b.outcome==="Loss"?"var(--red)":b.outcome==="Retreat"?"var(--yellow)":"var(--muted)";
+        html += `<div class="scout-def-row">
+          <div><span class="scout-def-name">${name}</span></div>
+          <div class="scout-counters">${ctrName?`<span class="scout-ctr-pill ${pillCls}">${ctrName}</span>`:`<span style="color:var(--muted);font-size:11px">—</span>`}</div>
+          <div class="scout-attempts${(b.attempts||1)>=3?" many":""}">
+            <span style="color:${outcomeColor}">${b.outcome}</span>
+            ${(b.attempts||1)>1?`<br>${b.attempts} att`:""}
+          </div>
+        </div>`;
+      });
+    }
+    html += `</div>`;
+  });
+
+  // Ships
+  if (byZone.ship.length) {
+    html += `<div class="scout-zone-block scout-zone-ship"><div class="scout-zone-title">🚀 Ships</div>`;
+    if (scoutActiveRound === "all") {
+      const defMap = {};
+      byZone.ship.forEach(b => { if(!defMap[b.defCode])defMap[b.defCode]=[]; defMap[b.defCode].push(b); });
+      Object.entries(defMap).sort((a,b)=>b[1].length-a[1].length).forEach(([code,bList])=>{
+        const name = scoutCodeToName(code);
+        const wins = bList.filter(b=>b.outcome==="Win").length;
+        const held = bList.filter(b=>b.outcome==="Loss"||b.outcome==="Draw").length;
+        const freq = bList.length;
+        const ctrs = [...new Set(bList.filter(b=>b.attackerCode).map(b=>scoutCodeToName(b.attackerCode)))];
+        html += `<div class="scout-def-row">
+          <div><span class="scout-def-name">${name}</span>${freq>=2?`<span class="scout-freq-badge">×${freq}</span>`:""}</div>
+          <div class="scout-counters">${ctrs.map(c=>`<span class="scout-ctr-pill">${c}</span>`).join("")||`<span style="color:var(--muted);font-size:11px">No data</span>`}</div>
+          <div class="scout-attempts"><span style="color:${held>0?"var(--red)":"var(--green)"}">${wins}W/${held}H</span></div>
+        </div>`;
+      });
+    } else {
+      byZone.ship.forEach(b=>{
+        const name = scoutCodeToName(b.defCode);
+        const ctrName = b.attackerCode ? scoutCodeToName(b.attackerCode) : null;
+        const outcomeColor = b.outcome==="Win"?"var(--green)":b.outcome==="Loss"?"var(--red)":"var(--yellow)";
+        html += `<div class="scout-def-row">
+          <div><span class="scout-def-name">${name}</span></div>
+          <div class="scout-counters">${ctrName?`<span class="scout-ctr-pill">${ctrName}</span>`:`<span style="color:var(--muted);font-size:11px">—</span>`}</div>
+          <div class="scout-attempts"><span style="color:${outcomeColor}">${b.outcome}</span></div>
+        </div>`;
+      });
+    }
+    html += `</div>`;
+  }
+
+  // Send to planner
+  if (groundAll.length > 0) {
+    html += `<div style="margin-top:10px;padding:10px 14px;background:var(--surface);border-radius:var(--r);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--muted)">📋 Top defenders per zone ready</span>
+      <button class="btn sm primary" onclick="scoutSendToPlanner()" style="font-size:12px">→ Load into Planner</button>
+      <span style="font-size:11px;color:var(--muted)">Fills the Planner with the most-used defenders, then you can run Solve</span>
+    </div>`;
+  }
+
+  if (!html) html = `<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">No defense data to display.</div>`;
+  results.innerHTML = html;
+}
+
+
+function scoutSetRound(r) {
+  scoutActiveRound = r;
+  scoutRender();
+}
+
+function scoutSendToPlanner() {
+  // Collect most-frequent defenders per zone from all rounds data
+  const byZone = { north:[], south:[], back:[], ship:[] };
+  const availRounds = Object.keys(scoutData.rounds).filter(r=>scoutData.rounds[r].length>0);
+  availRounds.forEach(r => {
+    (scoutData.rounds[r]||[]).forEach(b => {
+      const zone = b.zone || (b.isShip ? "ship" : null);
+      if (zone && byZone[zone]) byZone[zone].push(b);
+    });
+  });
+
+  const topN = (arr, n) => {
+    const freq = {};
+    arr.forEach(b=>{ freq[b.defCode]=(freq[b.defCode]||0)+1; });
+    return Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,n).map(([c])=>scoutCodeToName(c));
+  };
+
+  const mode = curMode;
+  const zoneCounts = mode==="3v3" ? {north:5,south:5,back:5,ships:3} : {north:4,south:4,back:3,ships:3};
+
+  ["north","south","back"].forEach(z => {
+    const tops = topN(byZone[z], zoneCounts[z]);
+    tops.forEach((name,i) => { if(i < slots[mode][z].length) slots[mode][z][i] = name; });
+  });
+  const shipTops = topN(byZone.ship, zoneCounts.ships);
+  shipTops.forEach((name,i) => { if(i < slots[mode].ships.length) slots[mode].ships[i] = name; });
+
+  ls.set("gac_slots_"+mode, JSON.stringify(slots[mode]));
+  showTab("planner", document.querySelectorAll(".tab-btn")[0]);
+  renderZones();
+  toast("Loaded most-used defenders into Planner — run Solve!");
+}
+
+function scoutRestoreState() {
+  const saved = ls.get("gac_scout_state");
+  if (!saved) return;
+  const s = JSON.parse(saved);
+  if (s.allyCode) document.getElementById("scoutAllyCode").value = s.allyCode;
+  if (s.eventId)  document.getElementById("scoutEventId").value  = s.eventId;
+}
+
+// INIT
+loadAll();
+setMode("3v3");
+dbInit();
+scoutRestoreState();
+
+</script>
+</body>
+</html>

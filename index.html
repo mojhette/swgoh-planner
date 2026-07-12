@@ -1347,7 +1347,7 @@ function dbGenerateScript(mode){
 
   btn.onclick = function(){
     btn.disabled = true;
-    const win = window.open(buildUrl(characters[0][0]), 'gacFetchTab_${mode}');
+    const win = window.open(buildUrl(characters[0][0]), '_blank');
     if(!win){
       console.error('window.open blocked even on click — popup blocker too strict.');
       btn.textContent = 'FAILED — popup blocked';
@@ -1355,13 +1355,20 @@ function dbGenerateScript(mode){
     }
     let idx = 0;
     let lastUrl = '';
+    let closedTicks = 0;
     function poll(){
       try{
         if(win.closed){
-          console.error('Tab closed unexpectedly at '+idx+'/'+characters.length);
-          btn.textContent = 'FAILED — tab closed early';
+          closedTicks++;
+          if(closedTicks > 5){
+            console.error('Tab closed unexpectedly at '+idx+'/'+characters.length);
+            btn.textContent = 'FAILED — tab closed early';
+            return;
+          }
+          setTimeout(poll, 300);
           return;
         }
+        closedTicks = 0;
         if(win.document.readyState === 'complete' && win.location.href !== lastUrl){
           lastUrl = win.location.href;
           const [code,name] = characters[idx];
@@ -1781,7 +1788,7 @@ function scoutGenerateScript() {
   btn.onclick = function(){
     btn.disabled = true;
     const results = {};
-    const win = window.open(buildUrl(rounds[0]), 'scoutFetchTab');
+    const win = window.open(buildUrl(rounds[0]), '_blank');
     if(!win){
       console.error('window.open blocked even on click — popup blocker too strict.');
       btn.textContent = 'FAILED — popup blocked';
@@ -1789,13 +1796,20 @@ function scoutGenerateScript() {
     }
     let idx = 0;
     let lastUrl = '';
+    let closedTicks = 0;
     function poll(){
       try{
         if(win.closed){
-          console.error('Tab closed unexpectedly at round '+(idx+1)+'/'+rounds.length);
-          btn.textContent = 'FAILED — tab closed early';
+          closedTicks++;
+          if(closedTicks > 5){
+            console.error('Tab closed unexpectedly at round '+(idx+1)+'/'+rounds.length);
+            btn.textContent = 'FAILED — tab closed early';
+            return;
+          }
+          setTimeout(poll, 300);
           return;
         }
+        closedTicks = 0;
         if(win.document.readyState === 'complete' && win.location.href !== lastUrl){
           lastUrl = win.location.href;
           const r = rounds[idx];

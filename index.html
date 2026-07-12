@@ -322,7 +322,7 @@ textarea{resize:vertical;margin-bottom:10px}
   <div class="db-section">
     <div class="db-section-title">Weekly Refresh Workflow</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
-      1. Set season numbers above &nbsp;→&nbsp; 2. Generate &amp; copy the script &nbsp;→&nbsp; 3. Paste into swgoh.gg console &nbsp;→&nbsp; 4. Import the downloaded file here
+      1. Set season numbers above &nbsp;→&nbsp; 2. Generate &amp; copy the script &nbsp;→&nbsp; 3. Open any swgoh.gg page, paste into console &nbsp;→&nbsp; 4. Click the green "START GAC FETCH" button the script injects (a real click, required) &nbsp;→&nbsp; 5. Wait for the file to auto-download &nbsp;→&nbsp; 6. Import it here
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn sm primary" onclick="dbGenerateScript('3v3')">📋 Copy 3v3 script</button>
@@ -351,7 +351,7 @@ textarea{resize:vertical;margin-bottom:10px}
 <div id="panel-scout" class="panel">
   <div class="infobox">
     Scouting uses the same browser-console approach as the DB Manager — no CORS issues.
-    <strong>Workflow:</strong> Enter the opponent's ally code + event ID → Copy script → Paste into swgoh.gg console → Import the downloaded JSON here.
+    <strong>Workflow:</strong> Enter the opponent's ally code + event ID → Copy script → Open swgoh.gg, paste into console → Click the orange "START SCOUT FETCH" button it injects (a real click, required) → Import the downloaded JSON here.
   </div>
 
   <div class="scout-input-row">
@@ -375,6 +375,7 @@ textarea{resize:vertical;margin-bottom:10px}
       <li>Enter ally code + event ID above, click <strong>Copy script</strong></li>
       <li>Open <strong>swgoh.gg</strong> in your browser (any page, must be logged in)</li>
       <li>Open DevTools console (F12 → Console) and paste the script</li>
+      <li>Click the orange <strong>START SCOUT FETCH</strong> button the script injects (a real click is required — swgoh.gg blocks script-only navigation)</li>
       <li>A JSON file downloads automatically — come back here and import it</li>
       <li>Click <strong>→ Load into Planner</strong> to fill your Planner slots</li>
     </ol>
@@ -1284,14 +1285,22 @@ function dbGenerateScript(mode){
     : `"/?sort=count"`;
 
   const script = `(function(){
+  // NOTE: swgoh.gg's WAF returns 403 on fetch()/XHR/iframe requests, even with
+  // credentials included — it requires a genuine top-level navigation
+  // (Sec-Fetch-Dest: document), which JS cannot fake. Workaround: open ONE
+  // real tab from a real click (a genuine user gesture), then reuse that same
+  // tab for every subsequent character via location.href navigation, polling
+  // readyState between hops.
   const characters = [
     ${entries}
   ];
   const baseUrl = '${baseUrl}';
   const season = ${season || 'null'};
   const results = {};
-  let index = 0;
-  function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  function buildUrl(code){
+    return baseUrl+code+(season ? '/?season_id=CHAMPIONSHIPS_GRAND_ARENA_GA2_EVENT_SEASON_'+season+'&sort=count' : '/?sort=count');
+  }
   function extractFromDoc(doc){
     const links = doc.querySelectorAll('a[href*="a_lead="]');
     const unique = {};
@@ -1312,23 +1321,7 @@ function dbGenerateScript(mode){
       .slice(0,10)
       .map(([c,d])=>c+'|'+d.seen+'|'+d.win);
   }
-  async function run(){
-    console.log('Starting ${mode} fetch for '+characters.length+' entries...');
-    for(let i=0;i<characters.length;i++){
-      const [code,name] = characters[i];
-      console.log('Fetching '+(i+1)+'/'+characters.length+': '+name+' ('+code+')');
-      try{
-        const url = baseUrl+code+(season ? '/?season_id=CHAMPIONSHIPS_GRAND_ARENA_GA2_EVENT_SEASON_'+season+'&sort=count' : '/?sort=count');
-        const resp = await fetch(url,{credentials:'include'});
-        const html = await resp.text();
-        const doc = new DOMParser().parseFromString(html,'text/html');
-        results[code] = {name:name, counters:extractFromDoc(doc)};
-      } catch(e){
-        console.warn('Failed: '+code, e.message);
-        results[code] = {name:name, counters:[]};
-      }
-      if(i<characters.length-1) await delay(1500);
-    }
+  function downloadResults(){
     let output = '';
     for(const [code,data] of Object.entries(results)){
       output += data.name+'\\n';
@@ -1340,13 +1333,67 @@ function dbGenerateScript(mode){
     a.href = URL.createObjectURL(blob);
     a.download = 'swgoh_${mode}_s'+( season||'X' )+'_counters.txt';
     a.click();
-    console.log('Done! File downloaded.');
   }
-  run();
+
+  const old = document.getElementById('gacFetchBtn');
+  if(old) old.remove();
+
+  const btn = document.createElement('button');
+  btn.id = 'gacFetchBtn';
+  btn.textContent = 'START GAC FETCH — ${mode} (' + characters.length + ' entries)';
+  btn.style.cssText = 'position:fixed;top:10px;left:10px;z-index:999999;padding:14px 22px;background:#22c55e;color:#fff;font-size:15px;font-weight:bold;border:none;border-radius:8px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+  document.body.appendChild(btn);
+  console.log('Button injected top-left: "'+btn.textContent+'" — click it to start (a real click is required, the WAF blocks script-only navigation).');
+
+  btn.onclick = function(){
+    btn.disabled = true;
+    const win = window.open(buildUrl(characters[0][0]), 'gacFetchTab_${mode}');
+    if(!win){
+      console.error('window.open blocked even on click — popup blocker too strict.');
+      btn.textContent = 'FAILED — popup blocked';
+      return;
+    }
+    let idx = 0;
+    let lastUrl = '';
+    function poll(){
+      try{
+        if(win.closed){
+          console.error('Tab closed unexpectedly at '+idx+'/'+characters.length);
+          btn.textContent = 'FAILED — tab closed early';
+          return;
+        }
+        if(win.document.readyState === 'complete' && win.location.href !== lastUrl){
+          lastUrl = win.location.href;
+          const [code,name] = characters[idx];
+          results[code] = {name:name, counters: extractFromDoc(win.document)};
+          console.log('✓ ('+(idx+1)+'/'+characters.length+') '+name+' — '+results[code].counters.length+' counters');
+          idx++;
+          btn.textContent = 'Fetching '+idx+'/'+characters.length+'...';
+          if(idx < characters.length){
+            setTimeout(function(){
+              win.location.href = buildUrl(characters[idx][0]);
+              setTimeout(poll, 900);
+            }, 700);
+          } else {
+            downloadResults();
+            win.close();
+            btn.textContent = '✓ Done — file downloaded';
+            console.log('🎉 Done! File downloaded — now import it via DB Manager → Import counters .txt');
+          }
+        } else {
+          setTimeout(poll, 300);
+        }
+      } catch(e){
+        console.warn('Poll error (retrying): '+e.message);
+        setTimeout(poll, 500);
+      }
+    }
+    setTimeout(poll, 500);
+  };
 })();`;
 
   navigator.clipboard.writeText(script).then(()=>{
-    toast('Script copied to clipboard — paste into swgoh.gg console');
+    toast('Script copied — paste in swgoh.gg console, then click the green button it injects');
   }).catch(()=>{
     // Fallback: show in log
     document.getElementById('fetchLog').textContent = script;
@@ -1704,34 +1751,79 @@ function scoutGenerateScript() {
     return battles;
   }
 
-  async function run(){
-    console.log('Starting scout for '+allyCode+'...');
-    const results = {};
-    for(let i=0;i<rounds.length;i++){
-      const r = rounds[i];
-      console.log('Fetching round '+r+'...');
-      try{
-        const url = 'https://swgoh.gg/p/'+allyCode+'/gac-history/'+eventId+'/'+r+'/';
-        const resp = await fetch(url,{credentials:'include'});
-        const html = await resp.text();
-        const doc  = new DOMParser().parseFromString(html,'text/html');
-        results[r] = parseDefenses(doc);
-        console.log('Round '+r+': '+results[r].length+' defense battles. Defenders: '+[...new Set(results[r].map(b=>b.defCode))].join(', '));
-      } catch(e){
-        console.warn('Round '+r+' failed:',e.message);
-        results[r] = [];
-      }
-      if(i < rounds.length-1) await delay(700);
-    }
+  function downloadResults(results){
     const out = JSON.stringify({ allyCode, eventId, rounds: results }, null, 2);
     const blob = new Blob([out],{type:'application/json'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'scout_'+allyCode+'_'+eventId+'.json';
     a.click();
-    console.log('Done! Import the downloaded JSON into the GAC Planner Scout tab.');
   }
-  run();
+
+  // NOTE: swgoh.gg's WAF returns 403 on fetch()/XHR requests, even with
+  // credentials included — it requires a genuine top-level navigation.
+  // Workaround: open ONE real tab from a real click, reuse it via
+  // location.href for each round, polling readyState between hops.
+  const old = document.getElementById('scoutFetchBtn');
+  if(old) old.remove();
+
+  const btn = document.createElement('button');
+  btn.id = 'scoutFetchBtn';
+  btn.textContent = 'START SCOUT FETCH — ' + allyCode + ' (' + rounds.length + ' rounds)';
+  btn.style.cssText = 'position:fixed;top:10px;left:10px;z-index:999999;padding:14px 22px;background:#f59e0b;color:#fff;font-size:15px;font-weight:bold;border:none;border-radius:8px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+  document.body.appendChild(btn);
+  console.log('Button injected top-left: "'+btn.textContent+'" — click it to start (a real click is required, the WAF blocks script-only navigation).');
+
+  function buildUrl(round){
+    return 'https://swgoh.gg/p/'+allyCode+'/gac-history/'+eventId+'/'+round+'/';
+  }
+
+  btn.onclick = function(){
+    btn.disabled = true;
+    const results = {};
+    const win = window.open(buildUrl(rounds[0]), 'scoutFetchTab');
+    if(!win){
+      console.error('window.open blocked even on click — popup blocker too strict.');
+      btn.textContent = 'FAILED — popup blocked';
+      return;
+    }
+    let idx = 0;
+    let lastUrl = '';
+    function poll(){
+      try{
+        if(win.closed){
+          console.error('Tab closed unexpectedly at round '+(idx+1)+'/'+rounds.length);
+          btn.textContent = 'FAILED — tab closed early';
+          return;
+        }
+        if(win.document.readyState === 'complete' && win.location.href !== lastUrl){
+          lastUrl = win.location.href;
+          const r = rounds[idx];
+          results[r] = parseDefenses(win.document);
+          console.log('✓ Round '+r+': '+results[r].length+' defense battles. Defenders: '+[...new Set(results[r].map(b=>b.defCode))].join(', '));
+          idx++;
+          btn.textContent = 'Fetching round '+idx+'/'+rounds.length+'...';
+          if(idx < rounds.length){
+            setTimeout(function(){
+              win.location.href = buildUrl(rounds[idx]);
+              setTimeout(poll, 900);
+            }, 700);
+          } else {
+            downloadResults(results);
+            win.close();
+            btn.textContent = '✓ Done — file downloaded';
+            console.log('🎉 Done! Import the downloaded JSON into the GAC Planner Scout tab.');
+          }
+        } else {
+          setTimeout(poll, 300);
+        }
+      } catch(e){
+        console.warn('Poll error (retrying): '+e.message);
+        setTimeout(poll, 500);
+      }
+    }
+    setTimeout(poll, 500);
+  };
 })();`;
 
   navigator.clipboard.writeText(script).then(() => {
